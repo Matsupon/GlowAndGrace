@@ -30,7 +30,7 @@ const Header = ({ onCartPress, onProfilePress }) => {
           <View style={styles.cartBadge}>
             <Text style={styles.cartBadgeText}>2</Text>
           </View>
-          <Ionicons name="cart-outline" size={35} color="#000" />
+          <Ionicons name="cart-outline" size={30} color="#731C82" />
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.headerIconContainer}
@@ -53,21 +53,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#E7A3F2',
-    paddingHorizontal: 16,
+    paddingLeft: 8,  // Reduced from 13 to 8
+    paddingRight: 13, // Kept right padding the same
     paddingTop: 5,
     paddingBottom: 8,
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: -5, // Added negative margin to pull logo left
   },
   logo: {
-    width: 70,
-    height: 70,
-    marginRight: 8,
+    width: 50,
+    height: 50, 
+    marginRight: 5, // Added small margin between logo and text
   },
   logoText: {
-    fontSize: 30,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#731C82',
     fontFamily: 'Katibeh_400Regular',
@@ -86,8 +88,8 @@ const styles = StyleSheet.create({
     right: -5,
     backgroundColor: '#731C82',
     borderRadius: 10,
-    width: 20,
-    height: 20,
+    width: 17,
+    height: 17,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
@@ -98,8 +100,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   profileIcon: {
-    width: 40,
-    height: 40,
+    width: 35,
+    height: 35,
     borderRadius: 16,
   },
 });

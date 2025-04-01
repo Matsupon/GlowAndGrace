@@ -17,13 +17,13 @@ const ProductCard = ({ product, isFavorite, onToggleFavorite, onAddToCart, onPre
         <TouchableOpacity onPress={() => onToggleFavorite(product.id)}>
           <Ionicons 
             name={isFavorite ? 'heart' : 'heart-outline'}
-            size={30} 
+            size={20} 
             color={isFavorite ? '#731C82' : '#999'} 
           />
         </TouchableOpacity>
         <Text style={styles.productPrice}>{product.price}</Text>
         <TouchableOpacity onPress={() => onAddToCart(product)}>
-          <Ionicons name="cart-outline" size={30} color="#999" />
+          <Ionicons name="cart-outline" size={20} color="#999" />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -42,13 +42,12 @@ const styles = StyleSheet.create({
   },
   productImage: {
     width: '100%',
-    height: 120,
+    height: 100,
     marginBottom: 8,
   },
   productName: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 8,
+    fontSize: 10.5,
+    textAlign: 'center', 
     height: 40,
     color: '#333',
   },

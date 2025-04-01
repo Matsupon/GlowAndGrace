@@ -21,6 +21,8 @@ import ProductCard from '../../../components/product/ProductCard';
 import BottomNav from '../../../components/layout/BottomNav';
 
 const { width } = Dimensions.get('window');
+const SLIDER_ASPECT_RATIO = 21 / 9; // Adjust this based on your image dimensions
+const sliderHeight = width / SLIDER_ASPECT_RATIO;
 
 // Sample product data
 const products = [
@@ -192,12 +194,13 @@ export default function MainPage() {
             scrollEventThrottle={16}
           >
             {sliderImages.map((image, index) => (
-              <Image
-                key={index}
-                source={image}
-                style={styles.sliderImage}
-                resizeMode="cover"
-              />
+              <View key={index} style={{ width }}>
+                <Image
+                  source={image}
+                  style={styles.sliderImage}
+                  resizeMode="contain"
+                />
+              </View>
             ))}
           </ScrollView>
           
@@ -220,18 +223,6 @@ export default function MainPage() {
               <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           )}
-          
-          <View style={styles.paginationContainer}>
-            {sliderImages.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  index === currentSliderIndex && styles.activePaginationDot,
-                ]}
-              />
-            ))}
-          </View>
         </View>
 
         {/* Featured Products */}
@@ -254,6 +245,7 @@ export default function MainPage() {
     </View>
   );
 }
+ 
 
 const styles = StyleSheet.create({
   container: {
@@ -264,15 +256,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sliderContainer: {
-    height: 220,
-    marginBottom: 20,
-    position: 'relative',
-    backgroundColor: '#f0f0f0', // Optional: add a background color
+    width: '100%',
+    height: sliderHeight,
+    position: 'relative', 
   },
   sliderImage: {
-    width: width,
-    height: 220,
-    resizeMode: 'stretch', // This will stretch the image to fill the container
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
   arrowButton: {
     position: 'absolute',
@@ -292,31 +283,11 @@ const styles = StyleSheet.create({
   rightArrow: {
     right: 10,
   },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    position: 'absolute',
-    bottom: 10,
-    width: '100%',
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    marginHorizontal: 4,
-  },
-  activePaginationDot: {
-    backgroundColor: '#fff',
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
   featuredTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginHorizontal: 16,
-    marginBottom: 12,
+    marginHorizontal: 16, 
+    marginBottom: 8, // Reduced from 12 to 8
     color: '#333',
   },
   productsGrid: {
@@ -326,3 +297,4 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
 });
+ 

@@ -30,13 +30,14 @@ const CategoryFilters = ({ activeCategory, onCategoryChange }) => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-start', // Changed from 'space-around'
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingLeft: 8, // Reduced from 16
+    paddingRight: 16,
     backgroundColor: '#FFFFFF',
   },
   filterButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16, // Reduced from 20
     paddingVertical: 10,
     borderRadius: 25,
     backgroundColor: '#fff',
@@ -47,6 +48,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginRight: 10, // Added margin between buttons
   },
   activeFilterButton: {
     backgroundColor: '#FF7BCC',

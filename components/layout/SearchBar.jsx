@@ -38,8 +38,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 0,
+    paddingVertical: 10, 
     fontSize: 14,
     color: '#333',
   },
