@@ -2,8 +2,10 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
+import { useRouter } from 'expo-router';
 
-const Header = ({ onCartPress, onProfilePress }) => {
+const Header = () => {
+  const router = useRouter();
   const [fontsLoaded] = useFonts({
     Katibeh_400Regular,
   });
@@ -25,7 +27,7 @@ const Header = ({ onCartPress, onProfilePress }) => {
       <View style={styles.headerRight}>
         <TouchableOpacity 
           style={styles.headerIconContainer}
-          onPress={onCartPress}
+          onPress={() => router.push('/cart/carts')}
         >
           <View style={styles.cartBadge}>
             <Text style={styles.cartBadgeText}>2</Text>
@@ -34,7 +36,7 @@ const Header = ({ onCartPress, onProfilePress }) => {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.headerIconContainer}
-          onPress={onProfilePress}
+          onPress={() => router.push('/profile')}
         >
           <Image 
             source={require('../../assets/images/profilepic.png')} 

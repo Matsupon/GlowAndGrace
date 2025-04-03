@@ -18,7 +18,7 @@ const ProductCard = ({ product, isFavorite, onToggleFavorite, onAddToCart, onPre
           <Ionicons 
             name={isFavorite ? 'heart' : 'heart-outline'}
             size={20} 
-            color={isFavorite ? '#731C82' : '#999'} 
+            color={isFavorite ? '#FF69B4' : '#999'} 
           />
         </TouchableOpacity>
         <Text style={styles.productPrice}>{product.price}</Text>
