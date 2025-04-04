@@ -4,7 +4,11 @@ import { Ionicons } from 'react-native-vector-icons';
 
 const ProductCard = ({ product, isFavorite, isInCart, onToggleFavorite, onAddToCart, onPress }) => {
   return (
-    <TouchableOpacity style={styles.productContainer} onPress={onPress}>
+    <TouchableOpacity 
+      style={styles.productContainer} 
+      onPress={() => onPress(product)}
+      activeOpacity={0.7}
+    >
       <Image 
         source={product.image} 
         style={styles.productImage} 
@@ -14,18 +18,28 @@ const ProductCard = ({ product, isFavorite, isInCart, onToggleFavorite, onAddToC
         {product.name}
       </Text>
       <View style={styles.productBottomRow}>
-        <TouchableOpacity onPress={() => onToggleFavorite(product.id)}>
+        <TouchableOpacity 
+          onPress={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(product.id);
+          }}
+        >
           <Ionicons 
             name={isFavorite ? 'heart' : 'heart-outline'}
-            size={20} 
+            size={25} 
             color={isFavorite ? '#FF69B4' : '#999'} 
           />
         </TouchableOpacity>
         <Text style={styles.productPrice}>{product.price}</Text>
-        <TouchableOpacity onPress={() => onAddToCart(product)}>
+        <TouchableOpacity 
+          onPress={(e) => {
+            e.stopPropagation();
+            onAddToCart(product);
+          }}
+        >
           <Ionicons 
             name={isInCart ? 'cart' : 'cart-outline'} 
-            size={20} 
+            size={25} 
             color={isInCart ? '#FFDA5B' : '#999'} 
           />
         </TouchableOpacity>

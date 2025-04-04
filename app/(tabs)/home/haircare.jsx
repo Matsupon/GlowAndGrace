@@ -62,6 +62,7 @@ export default function HaircarePage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [filterVisible, setFilterVisible] = useState(false);
   const [favorite, setFavorite] = useState({});
+  const [cartItems, setCartItems] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
@@ -73,8 +74,10 @@ export default function HaircarePage() {
   };
 
   const handleAddToCart = (product) => {
-    // Add cart functionality here
-    console.log('Added to cart:', product);
+    setCartItems(prev => ({
+      ...prev,
+      [product.id]: !prev[product.id]
+    }));
   };
 
   const handleProductPress = (product) => {
@@ -128,6 +131,7 @@ export default function HaircarePage() {
     <ProductCard
       product={item}
       isFavorite={favorite[item.id]}
+      isInCart={cartItems[item.id]}
       onToggleFavorite={toggleFavorite}
       onAddToCart={handleAddToCart}
       onPress={() => handleProductPress(item)}

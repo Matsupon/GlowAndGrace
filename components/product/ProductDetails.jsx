@@ -1,0 +1,209 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+  Pressable
+} from 'react-native';
+import { Ionicons } from 'react-native-vector-icons';
+
+const ProductDetails = ({ visible, product, onClose, onAddToCart, onToggleFavorite, isFavorite }) => {
+  const [quantity, setQuantity] = useState(1);
+
+  const incrementQuantity = () => {
+    if (quantity < 100) { // Assuming 100 is max available
+      setQuantity(quantity + 1);
+    }
+  };
+
+  const decrementQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.centeredView}>
+        <View style={styles.modalView}>
+          {/* Back Button */}
+          <TouchableOpacity style={styles.backButton} onPress={onClose}>
+           <Ionicons name="close" size={24} color="#333" />
+          </TouchableOpacity>
+
+          {/* Product Image */}
+          <Image
+            source={product?.image}
+            style={styles.productImage}
+            resizeMode="contain"
+          />
+
+          {/* Product Info Container */}
+          <View style={styles.productInfoContainer}>
+            {/* Product Name */}
+            <Text style={styles.productName}>{product?.name}</Text>
+
+            {/* Description */}
+            <Text style={styles.description}>{product?.description}</Text>
+
+            {/* Quantity and Actions Row */}
+            <View style={styles.actionsRow}>
+              {/* Quantity Controls */}
+              <View style={styles.quantityContainer}>
+                <TouchableOpacity onPress={decrementQuantity} style={styles.quantityButton}>
+                  <Text style={styles.quantityButtonText}>-</Text>
+                </TouchableOpacity>
+                <Text style={styles.quantityText}>{quantity}</Text>
+                <TouchableOpacity onPress={incrementQuantity} style={styles.quantityButton}>
+                  <Text style={styles.quantityButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Stock Info */}
+              <Text style={styles.stockInfo}>100 pieces available</Text>
+
+              {/* Favorite and Cart Icons */}
+              <View style={styles.iconsContainer}>
+                <TouchableOpacity onPress={onToggleFavorite} style={styles.iconButton}>
+                  <Ionicons
+                    name={isFavorite ? 'heart' : 'heart-outline'}
+                    size={24}
+                    color={isFavorite ? '#FF69B4' : '#333'}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => onAddToCart(quantity)} style={styles.iconButton}>
+                  <Ionicons name="cart-outline" size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Bottom Row */}
+            <View style={styles.bottomRow}>
+              <Text style={styles.price}>{product?.price}</Text>
+              <TouchableOpacity style={styles.orderButton}>
+                <Text style={styles.orderButtonText}>ORDER NOW</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  centeredView: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalView: {
+    flex: 1,
+    backgroundColor: 'white',
+    marginTop: 40,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    zIndex: 1,
+  },
+  productImage: {
+    width: '100%',
+    height: 300,
+    marginBottom: 20,
+  },
+  productInfoContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  productName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  description: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 25,
+    padding: 5,
+  },
+  quantityButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityButtonText: {
+    fontSize: 20,
+    color: '#333',
+  },
+  quantityText: {
+    marginHorizontal: 15,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  stockInfo: {
+    fontSize: 12,
+    color: '#666',
+  },
+  iconsContainer: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  iconButton: {
+    padding: 5,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    marginTop: 'auto',
+  },
+  price: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#731C82',
+  },
+  orderButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  orderButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
+
+export default ProductDetails; 

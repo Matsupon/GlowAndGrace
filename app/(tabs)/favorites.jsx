@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 import { useRouter } from 'expo-router';
@@ -7,6 +7,7 @@ import BottomNav from '../../components/layout/BottomNav';
 
 export default function Favorites() {
   const router = useRouter();
+  const [cartItems, setCartItems] = useState({});
 
   // Sample product data
   const favoriteProducts = [
@@ -23,6 +24,13 @@ export default function Favorites() {
       image: require('../../assets/images/product2.png'), // Make sure to add this image
     },
   ];
+
+  const handleAddToCart = (product) => {
+    setCartItems(prev => ({
+      ...prev,
+      [product.id]: !prev[product.id]
+    }));
+  };
 
   const handleClose = () => {
     router.push('/(tabs)/home');
@@ -46,8 +54,9 @@ export default function Favorites() {
               <ProductCard
                 product={product}
                 isFavorite={true}
+                isInCart={cartItems[product.id]}
                 onToggleFavorite={() => {}}
-                onAddToCart={() => {}}
+                onAddToCart={handleAddToCart}
                 onPress={() => {}}
               />
             </View>
