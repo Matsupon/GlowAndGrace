@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 
-const ProductCard = ({ product, isFavorite, onToggleFavorite, onAddToCart, onPress }) => {
+const ProductCard = ({ product, isFavorite, isInCart, onToggleFavorite, onAddToCart, onPress }) => {
   return (
     <TouchableOpacity style={styles.productContainer} onPress={onPress}>
       <Image 
@@ -23,7 +23,11 @@ const ProductCard = ({ product, isFavorite, onToggleFavorite, onAddToCart, onPre
         </TouchableOpacity>
         <Text style={styles.productPrice}>{product.price}</Text>
         <TouchableOpacity onPress={() => onAddToCart(product)}>
-          <Ionicons name="cart-outline" size={20} color="#999" />
+          <Ionicons 
+            name={isInCart ? 'cart' : 'cart-outline'} 
+            size={20} 
+            color={isInCart ? '#FFDA5B' : '#999'} 
+          />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>

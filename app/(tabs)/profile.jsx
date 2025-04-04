@@ -8,15 +8,33 @@ import {
   TouchableOpacity, 
   TextInput,
   Modal,
-  ScrollView
+  ScrollView,
+  Pressable
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from 'react-native-vector-icons';
 import BottomNav from '../../components/layout/BottomNav';
+import ProductUploadModal from '../../components/modals/ProductUploadModal';
 
 export default function Profile() {
   const router = useRouter();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
+  const [productData, setProductData] = useState({
+    name: '',
+    type: 'Skincare',
+    subtype: '',
+    price: '',
+    description: '',
+    productImage: null,
+    fdaImage: null
+  });
+
+  const productTypes = {
+    Skincare: ['Toner', 'Moisturizer', 'Cream', 'Cleanser'],
+    Haircare: ['Shampoo', 'Conditioner', 'Dry Shampoo', 'Hairspray'],
+    Makeup: ['Foundations', 'Concealers', 'Blushes', 'Lip Tints']
+  };
 
   const handleClose = () => {
     router.push('/(tabs)/home');
@@ -197,7 +215,10 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.linkItem}>
+          <TouchableOpacity 
+            style={styles.linkItem}
+            onPress={() => setIsUploadModalVisible(true)}
+          >
             <Text style={styles.linkText}>Become a Seller</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
@@ -221,6 +242,10 @@ export default function Profile() {
       </ScrollView>
 
       <EditProfileModal />
+      <ProductUploadModal 
+        visible={isUploadModalVisible}
+        onClose={() => setIsUploadModalVisible(false)}
+      />
       
       <BottomNav />
     </SafeAreaView>
@@ -402,5 +427,53 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  // New styles for product upload modal
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#F9F9F9',
+  },
+  dropdownButtonText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  imageUploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+    backgroundColor: '#F9F9F9',
+  },
+  imageUploadText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  uploadButton: {
+    backgroundColor: '#731C82',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  uploadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 
