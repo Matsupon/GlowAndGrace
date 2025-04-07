@@ -6,15 +6,24 @@ import {
   Modal,
   StyleSheet,
   TouchableOpacity,
-  Pressable
+  Pressable,
+  ScrollView
 } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 
-const ProductDetails = ({ visible, product, onClose, onAddToCart, onToggleFavorite, isFavorite }) => {
+const ProductDetails = ({
+  visible,
+  product,
+  onClose,
+  onAddToCart,
+  onToggleFavorite,
+  isFavorite
+}) => {
   const [quantity, setQuantity] = useState(1);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   const incrementQuantity = () => {
-    if (quantity < 100) { // Assuming 100 is max available
+    if (quantity < 100) {
       setQuantity(quantity + 1);
     }
   };
@@ -36,7 +45,7 @@ const ProductDetails = ({ visible, product, onClose, onAddToCart, onToggleFavori
         <View style={styles.modalView}>
           {/* Back Button */}
           <TouchableOpacity style={styles.backButton} onPress={onClose}>
-           <Ionicons name="close" size={24} color="#333" />
+            <Ionicons name="close" size={24} color="#333" />
           </TouchableOpacity>
 
           {/* Product Image */}
@@ -51,8 +60,20 @@ const ProductDetails = ({ visible, product, onClose, onAddToCart, onToggleFavori
             {/* Product Name */}
             <Text style={styles.productName}>{product?.name}</Text>
 
-            {/* Description */}
-            <Text style={styles.description}>{product?.description}</Text>
+            {/* Scrollable Description */}
+            <ScrollView style={styles.descriptionScroll} nestedScrollEnabled>
+              <Text
+                style={styles.description}
+                numberOfLines={showFullDescription ? undefined : 6}
+              >
+                {product?.description}
+              </Text>
+              <Pressable onPress={() => setShowFullDescription(!showFullDescription)}>
+                <Text style={styles.seeMoreText}>
+                  {showFullDescription ? 'See less' : 'See more'}
+                </Text>
+              </Pressable>
+            </ScrollView>
 
             {/* Quantity and Actions Row */}
             <View style={styles.actionsRow}>
@@ -132,11 +153,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#333',
   },
+  descriptionScroll: {
+    maxHeight: 120,
+    marginBottom: 20,
+  },
   description: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 20,
     lineHeight: 20,
+  },
+  seeMoreText: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    marginTop: 5,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -206,4 +235,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProductDetails; 
+export default ProductDetails;

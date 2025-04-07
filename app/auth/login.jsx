@@ -90,6 +90,14 @@ export default function Login() {
               </TouchableOpacity>
             </Link>
           </View>
+          
+          <View style={styles.adminLinkContainer}>
+            <Link href="/(tabs)/admin/dashboard" asChild>
+              <TouchableOpacity>
+                <Text style={styles.adminLink}>Admin Dashboard</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -190,12 +198,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 15,
   },
   signupText: {
     color: '#666',
     fontSize: 15,
   },
   signupLink: {
+    color: '#8d2a7b',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  adminLinkContainer: {
+    alignItems: 'flex-end',
+  },
+  adminLink: {
     color: '#8d2a7b',
     fontWeight: 'bold',
     fontSize: 15,
