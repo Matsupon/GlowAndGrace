@@ -57,7 +57,7 @@ export default function Sidebar({ isVisible, onClose }) {
           <MenuItem icon="home" label="Dashboard" onPress={() => router.push('/(tabs)/admin/dashboard')} />
           <MenuItem icon="user" label="Users" onPress={() => router.push('/(tabs)/admin/UserList')} />
           <MenuItem icon="users" label="Sellers" onPress={() => router.push('/(tabs)/admin/SellerList')} />
-          <MenuItem icon="user-plus" label="Pending Sellers" />
+          <MenuItem icon="user-plus" label="Pending Sellers" onPress={() => router.push('/(tabs)/admin/PendingSellers ')} />
           
           <DropdownMenuItem 
             icon={() => <MaterialCommunityIcons name="lotion" size={24} color="black" />} 
@@ -111,6 +111,18 @@ function DropdownMenuItem({ icon, label, subItems }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const rotateAnim = React.useRef(new Animated.Value(0)).current;
   const heightAnim = React.useRef(new Animated.Value(0)).current;
+  const router = useRouter();
+
+  const getRouteForSubItem = (mainCategory, subItem) => {
+    const category = mainCategory.toLowerCase().split(' ')[0];
+    const subCategory = subItem.toLowerCase();
+    return `/(tabs)/admin/products/${category}/${subCategory}`;
+  };
+
+  const handleSubItemPress = (item) => {
+    const route = getRouteForSubItem(label, item);
+    router.push(route);
+  };
 
   const toggleDropdown = () => {
     Animated.parallel([
@@ -137,7 +149,7 @@ function DropdownMenuItem({ icon, label, subItems }) {
 
   const subItemsHeight = heightAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, subItems.length * 40], // 40 is the height of each subitem
+    outputRange: [0, subItems.length * 40],
   });
 
   return (
@@ -162,7 +174,11 @@ function DropdownMenuItem({ icon, label, subItems }) {
       
       <Animated.View style={[styles.subItemsContainer, { height: subItemsHeight }]}>
         {subItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.subItem}>
+          <TouchableOpacity 
+            key={index} 
+            style={styles.subItem}
+            onPress={() => handleSubItemPress(item)}
+          >
             <Text style={styles.subItemText}>{item}</Text>
           </TouchableOpacity>
         ))}
