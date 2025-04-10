@@ -7,56 +7,58 @@ import ProductModal from '../../../../../components/admin/products/ProductModal'
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
 
-export default function TonersPage() {
+export default function DryShampooPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
 
   const products = [
     {
       id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
+      name: 'Batiste Dry Shampoo Original',
+      description: 'A quick and easy way to refresh hair between washes, absorbing excess oil and adding volume.',
+      price: 100.00,
+      image: require('../../../../../assets/images/product10.png'),
       details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
+        brand: 'Batiste',
+        volume: '200ml',
         benefits: [
-          'Skin lightening',
-          'Pore minimizing',
-          'Skin purifying'
+          'Refreshes hair',
+          'Absorbs oil',
+          'Adds volume',
+          'Quick application'
         ],
         ingredients: [
-          'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
+          'Butane',
+          'Isobutane',
+          'Propane',
+          'Alcohol Denat'
         ]
       }
     },
     {
       id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
+      name: 'Dove Refresh+Care Dry Shampoo',
+      description: 'A gentle dry shampoo that cleanses hair without water while adding volume and freshness.',
+      price: 95.00,
+      image: require('../../../../../assets/images/product11.png'),
       details: {
-        brand: 'BELO',
-        volume: '50ml',
+        brand: 'Dove',
+        volume: '200ml',
         benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
+          'Gentle cleansing',
+          'Adds volume',
+          'Refreshes hair',
+          'No water needed'
         ],
         ingredients: [
-          'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
+          'Butane',
+          'Isobutane',
+          'Propane',
+          'Oat Extract'
         ]
       }
     },
@@ -98,7 +100,6 @@ export default function TonersPage() {
 
   const handleSaveProduct = (updatedProduct) => {
     // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
     handleCloseModal();
   };
 
@@ -111,10 +112,9 @@ export default function TonersPage() {
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
-        <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Toners"</Text>
+        <Text style={styles.title}>Haircare Products List</Text>
+        <Text style={styles.subtitle}>"Dry Shampoos"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
   },
-}); 
+});

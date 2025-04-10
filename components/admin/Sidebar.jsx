@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Easing, ScrollView } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -53,40 +53,62 @@ export default function Sidebar({ isVisible, onClose }) {
 
         <View style={styles.separator} />
 
-        <View style={styles.menuItemsContainer}>
-          <MenuItem icon="home" label="Dashboard" onPress={() => router.push('/(tabs)/admin/dashboard')} />
-          <MenuItem icon="user" label="Users" onPress={() => router.push('/(tabs)/admin/UserList')} />
-          <MenuItem icon="users" label="Sellers" onPress={() => router.push('/(tabs)/admin/SellerList')} />
-          <MenuItem icon="user-plus" label="Pending Sellers" onPress={() => router.push('/(tabs)/admin/PendingSellers ')} />
-          
-          <DropdownMenuItem 
-            icon={() => <MaterialCommunityIcons name="lotion" size={24} color="black" />} 
-            label="Skincare Products"
-            subItems={['Toners', 'Moisturizer', 'Cream', 'Cleanser']}
-          />
-          
-          <DropdownMenuItem 
-            icon={() => <MaterialCommunityIcons name="bottle-tonic" size={24} color="black" />} 
-            label="Haircare Products"
-            subItems={['Shampoo', 'Conditioner', 'Dry Shampoo', 'Hairspray']}
-          />
-          
-          <DropdownMenuItem 
-            icon="paint-brush" 
-            label="Makeup Products"
-            subItems={['Foundations', 'Concealers', 'Blushes', 'Lip Tints']}
-          />
-          
-          <MenuItem icon="plus" label="Add Product" />
-          <MenuItem icon="shopping-cart" label="Orders" />
-          <MenuItem icon="file-text" label="Order Details" />
-        </View>
+        <ScrollView 
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.menuItemsContainer}>
+            <MenuItem icon="home" label="Dashboard" onPress={() => router.push('/(tabs)/admin/dashboard')} />
+            <MenuItem icon="user" label="Users" onPress={() => router.push('/(tabs)/admin/UserList')} />
+            <MenuItem icon="users" label="Sellers" onPress={() => router.push('/(tabs)/admin/SellerList')} />
+            <MenuItem icon="user-plus" label="Pending Sellers" onPress={() => router.push('/(tabs)/admin/PendingSellers ')} />
+            
+            <DropdownMenuItem 
+              icon={() => <MaterialCommunityIcons name="lotion" size={24} color="black" />} 
+              label="Skincare Products"
+              subItems={[
+                { label: 'Toners', route: '/(tabs)/admin/products/skincare/toners' },
+                { label: 'Moisturizer', route: '/(tabs)/admin/products/skincare/moisturizer' },
+                { label: 'Cream', route: '/(tabs)/admin/products/skincare/cream' },
+                { label: 'Cleanser', route: '/(tabs)/admin/products/skincare/cleanser' }
+              ]}
+            />
+            
+            <DropdownMenuItem 
+              icon={() => <MaterialCommunityIcons name="bottle-tonic" size={24} color="black" />} 
+              label="Haircare Products"
+              subItems={[
+                { label: 'Shampoo', route: '/(tabs)/admin/products/haircare/shampoo' },
+                { label: 'Conditioner', route: '/(tabs)/admin/products/haircare/conditioner' },
+                { label: 'Dry Shampoo', route: '/(tabs)/admin/products/haircare/dryshampoo' },
+                { label: 'Hairspray', route: '/(tabs)/admin/products/haircare/hairspray' }
+              ]}
+            />
+            
+            <DropdownMenuItem 
+              icon="paint-brush" 
+              label="Makeup Products"
+              subItems={[
+                { label: 'Foundations', route: '/(tabs)/admin/products/makeup/foundations' },
+                { label: 'Concealers', route: '/(tabs)/admin/products/makeup/concealers' },
+                { label: 'Blushes', route: '/(tabs)/admin/products/makeup/blushes' },
+                { label: 'Lip Tints', route: '/(tabs)/admin/products/makeup/liptints' }
+              ]}
+            />
+            
+            <MenuItem icon="plus" label="Add Product" onPress={() => router.push('/(tabs)/admin/AddProduct')} />
+            <MenuItem icon="shopping-cart" label="Orders" onPress={() => router.push('/(tabs)/admin/OrdersList')} />
+            <MenuItem icon="file-text" label="Order Details" onPress={() => router.push('/(tabs)/admin/OrderDetails')} />
+          </View>
+        </ScrollView>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={onClose}>
-          <Link href="/auth/login" asChild>
-            <Text style={styles.logoutText}>LOGOUT</Text>
-          </Link>
-        </TouchableOpacity>
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.logoutButton} onPress={onClose}>
+            <Link href="/auth/login" asChild>
+              <Text style={styles.logoutText}>LOGOUT</Text>
+            </Link>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </>
   );
@@ -112,17 +134,6 @@ function DropdownMenuItem({ icon, label, subItems }) {
   const rotateAnim = React.useRef(new Animated.Value(0)).current;
   const heightAnim = React.useRef(new Animated.Value(0)).current;
   const router = useRouter();
-
-  const getRouteForSubItem = (mainCategory, subItem) => {
-    const category = mainCategory.toLowerCase().split(' ')[0];
-    const subCategory = subItem.toLowerCase();
-    return `/(tabs)/admin/products/${category}/${subCategory}`;
-  };
-
-  const handleSubItemPress = (item) => {
-    const route = getRouteForSubItem(label, item);
-    router.push(route);
-  };
 
   const toggleDropdown = () => {
     Animated.parallel([
@@ -177,9 +188,9 @@ function DropdownMenuItem({ icon, label, subItems }) {
           <TouchableOpacity 
             key={index} 
             style={styles.subItem}
-            onPress={() => handleSubItemPress(item)}
+            onPress={() => router.push(item.route)}
           >
-            <Text style={styles.subItemText}>{item}</Text>
+            <Text style={styles.subItemText}>{item.label}</Text>
           </TouchableOpacity>
         ))}
       </Animated.View>
@@ -204,13 +215,21 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 250,
     backgroundColor: '#F5B4FF',
-    padding: 20,
     zIndex: 1000,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 80, // Extra space for the logout button
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
+    padding: 20,
+    paddingBottom: 0,
   },
   profileImage: {
     width: 50,
@@ -233,6 +252,7 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: '#000000',
+    marginHorizontal: 20,
     marginVertical: 10,
   },
   menuItemsContainer: {
@@ -257,8 +277,14 @@ const styles = StyleSheet.create({
     width: 20,
     alignItems: 'center',
   },
+  footer: {
+    padding: 20,
+    paddingBottom: 30,
+    borderTopWidth: 1,
+    borderTopColor: '#000000',
+  },
   logoutButton: {
-    paddingVertical: 15,
+    paddingVertical: 5,
     alignItems: 'center',
   },
   logoutText: {
@@ -275,7 +301,7 @@ const styles = StyleSheet.create({
   },
   subItemsContainer: {
     overflow: 'hidden',
-    paddingLeft: 50, // indent subitems
+    paddingLeft: 50,
   },
   subItem: {
     paddingVertical: 10,

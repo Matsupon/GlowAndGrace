@@ -222,6 +222,14 @@ export default function Profile() {
             <Text style={styles.linkText}>Become a Seller</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.linkItem}
+            onPress={() => router.push('/(tabs)/sellerproduct')}
+          >
+            <Text style={styles.linkText}>My Products</Text>
+            <Ionicons name="chevron-forward" size={24} color="#666" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.buttonContainer}>

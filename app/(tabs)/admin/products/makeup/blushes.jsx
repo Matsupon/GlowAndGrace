@@ -7,56 +7,58 @@ import ProductModal from '../../../../../components/admin/products/ProductModal'
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
 
-export default function TonersPage() {
+export default function BlushesPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
 
   const products = [
     {
       id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
+      name: 'Maybelline Fit Me Blush',
+      description: 'A natural-looking blush that provides a soft, buildable color for a healthy, radiant glow.',
+      price: 100.00,
+      image: require('../../../../../assets/images/product16.png'),
       details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
+        brand: 'Maybelline',
+        volume: '4.5g',
         benefits: [
-          'Skin lightening',
-          'Pore minimizing',
-          'Skin purifying'
+          'Natural finish',
+          'Buildable color',
+          'Long-lasting',
+          'Blendable formula'
         ],
         ingredients: [
-          'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
+          'Talc',
+          'Mica',
+          'Dimethicone',
+          'Titanium Dioxide'
         ]
       }
     },
     {
       id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
+      name: 'L\'Oreal Paris True Match Blush',
+      description: 'A silky-smooth blush that matches your skin tone perfectly and provides a natural flush of color.',
       price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
+      image: require('../../../../../assets/images/product17.png'),
       details: {
-        brand: 'BELO',
-        volume: '50ml',
+        brand: 'L\'Oreal Paris',
+        volume: '4.5g',
         benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
+          'True match technology',
+          'Silky texture',
+          'Natural finish',
+          'Long-lasting'
         ],
         ingredients: [
-          'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
+          'Talc',
+          'Mica',
+          'Dimethicone',
+          'Titanium Dioxide'
         ]
       }
     },
@@ -98,7 +100,6 @@ export default function TonersPage() {
 
   const handleSaveProduct = (updatedProduct) => {
     // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
     handleCloseModal();
   };
 
@@ -111,10 +112,9 @@ export default function TonersPage() {
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
-        <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Toners"</Text>
+        <Text style={styles.title}>Makeup Products List</Text>
+        <Text style={styles.subtitle}>"Blushes"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
   },
-}); 
+});

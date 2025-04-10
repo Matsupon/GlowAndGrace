@@ -7,56 +7,58 @@ import ProductModal from '../../../../../components/admin/products/ProductModal'
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
 
-export default function TonersPage() {
+export default function FoundationsPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
 
   const products = [
     {
       id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
+      name: 'Maybelline Fit Me Matte + Poreless Foundation',
+      description: 'A lightweight foundation that provides a natural, matte finish while minimizing the appearance of pores.',
+      price: 150.00,
+      image: require('../../../../../assets/images/product14.png'),
       details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
+        brand: 'Maybelline',
+        volume: '30ml',
         benefits: [
-          'Skin lightening',
+          'Matte finish',
           'Pore minimizing',
-          'Skin purifying'
+          'Lightweight',
+          'Natural coverage'
         ],
         ingredients: [
           'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
+          'Cyclopentasiloxane',
+          'Dimethicone',
+          'Titanium Dioxide'
         ]
       }
     },
     {
       id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
+      name: 'L\'Oreal Paris True Match Foundation',
+      description: 'A blendable foundation that matches your skin tone perfectly and provides buildable coverage.',
+      price: 160.00,
+      image: require('../../../../../assets/images/product15.png'),
       details: {
-        brand: 'BELO',
-        volume: '50ml',
+        brand: 'L\'Oreal Paris',
+        volume: '30ml',
         benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
+          'True match technology',
+          'Buildable coverage',
+          'Natural finish',
+          'Long-lasting'
         ],
         ingredients: [
           'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
+          'Cyclopentasiloxane',
+          'Dimethicone',
+          'Titanium Dioxide'
         ]
       }
     },
@@ -98,7 +100,6 @@ export default function TonersPage() {
 
   const handleSaveProduct = (updatedProduct) => {
     // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
     handleCloseModal();
   };
 
@@ -111,10 +112,9 @@ export default function TonersPage() {
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
-        <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Toners"</Text>
+        <Text style={styles.title}>Makeup Products List</Text>
+        <Text style={styles.subtitle}>"Foundations"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
   },
-}); 
+});

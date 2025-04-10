@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 
 const productTypes = {
   Skincare: ['Toner', 'Moisturizer', 'Cream', 'Cleanser'],
@@ -35,6 +36,8 @@ const ProductUploadModal = ({ visible, onClose }) => {
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showSubtypeDropdown, setShowSubtypeDropdown] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     (async () => {
@@ -146,20 +149,8 @@ const ProductUploadModal = ({ visible, onClose }) => {
   };
 
   const handleUpload = () => {
-    if (!productData.name || !productData.type || !productData.subtype || 
-        !productData.price || !productData.description || 
-        !productData.productImage || !productData.fdaImage) {
-      Alert.alert(
-        'Missing Information',
-        'Please fill in all fields and upload both images.'
-      );
-      return;
-    }
-
-    // Show success popup
+    // Show success popup regardless of validation for testing
     setShowSuccessPopup(true);
-
-    // Hide popup and close modal after 500ms
     setTimeout(() => {
       setShowSuccessPopup(false);
       // Reset form and close modal
@@ -173,7 +164,9 @@ const ProductUploadModal = ({ visible, onClose }) => {
         fdaImage: null
       });
       onClose();
-    }, 1000);
+      // Navigate to home
+      router.push('/(tabs)/home');
+    }, 2000);
   };
 
   const SuccessPopup = () => (
@@ -187,7 +180,7 @@ const ProductUploadModal = ({ visible, onClose }) => {
           <View style={styles.successIconContainer}>
             <Ionicons name="checkmark" size={40} color="#FFFFFF" />
           </View>
-          <Text style={styles.successText}>Product uploaded successfully!</Text>
+          <Text style={styles.successText}>Product Uploaded Successfully!</Text>
         </View>
       </View>
     </Modal>
@@ -452,8 +445,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   successOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -476,7 +473,8 @@ const styles = StyleSheet.create({
   successText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#333333',
+    color: '#000000',
+    textAlign: 'center',
   },
 });
 

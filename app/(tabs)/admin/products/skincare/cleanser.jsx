@@ -7,56 +7,58 @@ import ProductModal from '../../../../../components/admin/products/ProductModal'
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
 
-export default function TonersPage() {
+export default function CleanserPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
 
   const products = [
     {
       id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
+      name: 'Cetaphil Gentle Skin Cleanser',
+      description: 'A mild, non-irritating cleanser that effectively removes dirt and makeup while maintaining the skin\'s natural moisture barrier.',
+      price: 85.00,
+      image: require('../../../../../assets/images/product6.png'),
       details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
+        brand: 'Cetaphil',
+        volume: '250ml',
         benefits: [
-          'Skin lightening',
-          'Pore minimizing',
-          'Skin purifying'
+          'Gentle cleansing',
+          'Non-irritating',
+          'Maintains moisture barrier',
+          'Suitable for sensitive skin'
         ],
         ingredients: [
           'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
+          'Cetyl Alcohol',
+          'Propylene Glycol',
+          'Sodium Lauryl Sulfate'
         ]
       }
     },
     {
       id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
+      name: 'Neutrogena Deep Clean Facial Cleanser',
+      description: 'A deep cleansing formula that removes dirt, oil, and makeup while preventing breakouts and leaving skin refreshed.',
+      price: 95.00,
+      image: require('../../../../../assets/images/product7.png'),
       details: {
-        brand: 'BELO',
-        volume: '50ml',
+        brand: 'Neutrogena',
+        volume: '200ml',
         benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
+          'Deep cleansing',
+          'Oil control',
+          'Prevents breakouts',
+          'Refreshing'
         ],
         ingredients: [
           'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
+          'Sodium Laureth Sulfate',
+          'Cocamidopropyl Betaine',
+          'Salicylic Acid'
         ]
       }
     },
@@ -98,7 +100,6 @@ export default function TonersPage() {
 
   const handleSaveProduct = (updatedProduct) => {
     // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
     handleCloseModal();
   };
 
@@ -111,10 +112,9 @@ export default function TonersPage() {
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
         <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Toners"</Text>
+        <Text style={styles.subtitle}>"Cleansers"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
   },
-}); 
+});

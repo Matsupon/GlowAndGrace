@@ -7,56 +7,58 @@ import ProductModal from '../../../../../components/admin/products/ProductModal'
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
 
-export default function TonersPage() {
+export default function CreamPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
 
   const products = [
     {
       id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
+      name: 'Pond\'s Bright Beauty Spot-less Glow Cream',
+      description: 'A brightening cream that helps reduce dark spots and evens out skin tone while providing deep hydration.',
+      price: 120.00,
+      image: require('../../../../../assets/images/product4.png'),
       details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
+        brand: 'Pond\'s',
+        volume: '50g',
         benefits: [
-          'Skin lightening',
-          'Pore minimizing',
-          'Skin purifying'
+          'Brightens skin',
+          'Reduces dark spots',
+          'Even skin tone',
+          'Deep hydration'
         ],
         ingredients: [
           'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
+          'Glycerin',
+          'Niacinamide',
+          'Vitamin B3'
         ]
       }
     },
     {
       id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
+      name: 'Olay Regenerist Micro-Sculpting Cream',
+      description: 'An anti-aging cream that helps reduce fine lines and wrinkles while improving skin elasticity.',
+      price: 150.00,
+      image: require('../../../../../assets/images/product5.png'),
       details: {
-        brand: 'BELO',
-        volume: '50ml',
+        brand: 'Olay',
+        volume: '50g',
         benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
+          'Anti-aging',
+          'Reduces fine lines',
+          'Improves elasticity',
+          'Firming'
         ],
         ingredients: [
           'Water',
-          'UV Filters',
           'Glycerin',
-          'Niacinamide'
+          'Niacinamide',
+          'Amino-Peptide Complex'
         ]
       }
     },
@@ -98,7 +100,6 @@ export default function TonersPage() {
 
   const handleSaveProduct = (updatedProduct) => {
     // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
     handleCloseModal();
   };
 
@@ -111,10 +112,9 @@ export default function TonersPage() {
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
         <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Toners"</Text>
+        <Text style={styles.subtitle}>"Creams"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
   },
-}); 
+});

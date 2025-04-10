@@ -7,56 +7,58 @@ import ProductModal from '../../../../../components/admin/products/ProductModal'
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
 
-export default function TonersPage() {
+export default function ConditionerPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
 
   const products = [
     {
       id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
+      name: 'Tresemme Keratin Smooth Conditioner',
+      description: 'A smoothing conditioner infused with keratin that helps tame frizz and leaves hair silky smooth.',
+      price: 130.00,
+      image: require('../../../../../assets/images/product12.png'),
       details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
+        brand: 'Tresemme',
+        volume: '400ml',
         benefits: [
-          'Skin lightening',
-          'Pore minimizing',
-          'Skin purifying'
+          'Smooths hair',
+          'Reduces frizz',
+          'Adds shine',
+          'Keratin treatment'
         ],
         ingredients: [
           'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
+          'Cetyl Alcohol',
+          'Behentrimonium Chloride',
+          'Keratin'
         ]
       }
     },
     {
       id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
+      name: 'Dove Intense Repair Conditioner',
+      description: 'A deeply nourishing conditioner that helps repair damaged hair and restore its natural strength.',
+      price: 125.00,
+      image: require('../../../../../assets/images/product13.png'),
       details: {
-        brand: 'BELO',
-        volume: '50ml',
+        brand: 'Dove',
+        volume: '400ml',
         benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
+          'Repairs damage',
+          'Strengthens hair',
+          'Deep nourishment',
+          'Restores shine'
         ],
         ingredients: [
           'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
+          'Cetyl Alcohol',
+          'Behentrimonium Chloride',
+          'Hydrolyzed Keratin'
         ]
       }
     },
@@ -98,7 +100,6 @@ export default function TonersPage() {
 
   const handleSaveProduct = (updatedProduct) => {
     // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
     handleCloseModal();
   };
 
@@ -111,10 +112,9 @@ export default function TonersPage() {
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
-        <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Toners"</Text>
+        <Text style={styles.title}>Haircare Products List</Text>
+        <Text style={styles.subtitle}>"Conditioners"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 20,
-    color: '#731C82',
+    color: '#333',
     marginTop: 5,
   },
   selectAllContainer: {
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
   },
-}); 
+});

@@ -7,56 +7,58 @@ import ProductModal from '../../../../../components/admin/products/ProductModal'
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
 
-export default function TonersPage() {
+export default function ShampooPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
 
   const products = [
     {
       id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
+      name: 'Pantene Pro-V Silky Smooth Care Shampoo',
+      description: 'A nourishing shampoo that helps smooth and detangle hair while providing deep moisture and shine.',
+      price: 120.00,
+      image: require('../../../../../assets/images/product10.png'),
       details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
+        brand: 'Pantene',
+        volume: '400ml',
         benefits: [
-          'Skin lightening',
-          'Pore minimizing',
-          'Skin purifying'
+          'Smooths hair',
+          'Detangles',
+          'Adds shine',
+          'Deep moisture'
         ],
         ingredients: [
           'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
+          'Sodium Laureth Sulfate',
+          'Cocamidopropyl Betaine',
+          'Panthenol'
         ]
       }
     },
     {
       id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
+      name: 'Head & Shoulders Anti-Dandruff Shampoo',
+      description: 'A clinically proven anti-dandruff shampoo that helps eliminate flakes and soothe an itchy scalp.',
       price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
+      image: require('../../../../../assets/images/product11.png'),
       details: {
-        brand: 'BELO',
-        volume: '50ml',
+        brand: 'Head & Shoulders',
+        volume: '400ml',
         benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
+          'Anti-dandruff',
+          'Soothes scalp',
+          'Prevents flakes',
+          'Gentle cleansing'
         ],
         ingredients: [
           'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
+          'Sodium Laureth Sulfate',
+          'Zinc Pyrithione',
+          'Cocamidopropyl Betaine'
         ]
       }
     },
@@ -98,7 +100,6 @@ export default function TonersPage() {
 
   const handleSaveProduct = (updatedProduct) => {
     // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
     handleCloseModal();
   };
 
@@ -111,10 +112,9 @@ export default function TonersPage() {
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
-        <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Toners"</Text>
+        <Text style={styles.title}>Haircare Products List</Text>
+        <Text style={styles.subtitle}>"Shampoos"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
   },
-}); 
+});

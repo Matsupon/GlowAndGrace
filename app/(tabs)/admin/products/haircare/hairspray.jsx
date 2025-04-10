@@ -7,56 +7,58 @@ import ProductModal from '../../../../../components/admin/products/ProductModal'
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
 
-export default function TonersPage() {
+export default function HairsprayPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
 
   const products = [
     {
       id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
+      name: 'Tresemme Extra Hold Hairspray',
+      description: 'A strong-hold hairspray that keeps your style in place all day while adding shine and reducing frizz.',
       price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
+      image: require('../../../../../assets/images/product12.png'),
       details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
+        brand: 'Tresemme',
+        volume: '400ml',
         benefits: [
-          'Skin lightening',
-          'Pore minimizing',
-          'Skin purifying'
+          'Extra hold',
+          'Adds shine',
+          'Reduces frizz',
+          'Long-lasting'
         ],
         ingredients: [
-          'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
+          'SD Alcohol 40',
+          'VP/VA Copolymer',
+          'Aminomethyl Propanol',
+          'Fragrance'
         ]
       }
     },
     {
       id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
+      name: 'Pantene Flexible Hold Hairspray',
+      description: 'A flexible-hold hairspray that provides natural movement while keeping your style intact.',
+      price: 105.00,
+      image: require('../../../../../assets/images/product13.png'),
       details: {
-        brand: 'BELO',
-        volume: '50ml',
+        brand: 'Pantene',
+        volume: '400ml',
         benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
+          'Flexible hold',
+          'Natural movement',
+          'No stiffness',
+          'Easy to brush out'
         ],
         ingredients: [
-          'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
+          'SD Alcohol 40',
+          'VP/VA Copolymer',
+          'Aminomethyl Propanol',
+          'Panthenol'
         ]
       }
     },
@@ -98,7 +100,6 @@ export default function TonersPage() {
 
   const handleSaveProduct = (updatedProduct) => {
     // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
     handleCloseModal();
   };
 
@@ -111,10 +112,9 @@ export default function TonersPage() {
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
-        <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Toners"</Text>
+        <Text style={styles.title}>Haircare Products List</Text>
+        <Text style={styles.subtitle}>"Hairsprays"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
   },
-}); 
+});
