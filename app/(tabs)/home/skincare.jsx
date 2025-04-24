@@ -29,31 +29,31 @@ const skincareFilters = [
 const products = [
   {
     id: '1',
-    name: 'KOJIE SAN Skin Lightening Soap',
+    name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
     price: '₱140',
     image: require('../../../assets/images/product1.png'),
-    category: 'cleanser'
+    category: 'toner'
   },
   {
     id: '2',
-    name: 'MYRA E Fresh Glow Whitening Cream',
+    name: 'MYRA E Fresh Glow Whitening MYRA E Fresh Glow Glow Whitening Facial Moisturizer',
     price: '₱140',
     image: require('../../../assets/images/product2.png'),
-    category: 'cream'
+    category: 'moisturizer'
   },
   {
     id: '3',
-    name: 'BELO SunExpert Sunscreen SPF50',
+    name: 'BELO Cream SPF50',
     price: '₱140',
     image: require('../../../assets/images/product3.png'),
-    category: 'moisturizer'
+    category: 'cream'
   },
   {
     id: '4',
     name: 'CELETEQUE Hydration Facial Moisturizer',
     price: '₱140',
     image: require('../../../assets/images/product2.png'),
-    category: 'moisturizer'
+    category: 'cleanser'
   },
 ];
 

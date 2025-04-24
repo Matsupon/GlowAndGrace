@@ -53,7 +53,7 @@ const OrderDetails = () => {
           >
             <Text style={styles.orderId}>1</Text>
             <Text style={styles.productName}>
-              KOJIE SAN Skin Lightening{'\n'}Pore Minimizing Toner 100ml
+              KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml
             </Text>
             <View style={styles.statusContainer}>
               <Text style={styles.status}>{currentStatus}</Text>

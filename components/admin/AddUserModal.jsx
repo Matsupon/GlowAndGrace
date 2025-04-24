@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, Picker, StyleSheet, Animated } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, Animated } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 
 const AddUserModal = ({ visible, onClose }) => {

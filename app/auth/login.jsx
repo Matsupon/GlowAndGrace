@@ -35,10 +35,10 @@ export default function Login() {
           <Text style={styles.welcomeBackText}>Back!</Text>
           
           <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Username</Text>
+            <Text style={styles.inputLabel}>Email</Text>
             <View style={styles.inputWrapper}>
               <Image 
-                source={require('../../assets/images/userIconlogin.png')} 
+                source={require('../../assets/images/email.png')} 
                 style={styles.inputIcon} 
               />
               <TextInput
@@ -71,7 +71,7 @@ export default function Login() {
                 onPress={() => setShowPassword(!showPassword)}
               >
                 <Image 
-                  source={require('../../assets/images/password.png')} 
+                  source={require('../../assets/images/eye.png')} 
                   style={styles.eyeIcon} 
                 />
               </TouchableOpacity>

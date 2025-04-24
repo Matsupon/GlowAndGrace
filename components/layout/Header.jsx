@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     marginRight: 12, // Added small margin between logo and text
   },
   logoText: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#731C82',
     fontFamily: 'Katibeh_400Regular',

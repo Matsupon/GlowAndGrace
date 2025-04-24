@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#731C82',
     fontWeight: 'bold',
-    lineHeight: 34,
+    lineHeight: 19,
   },
   quantityText: {
     width: 40,
