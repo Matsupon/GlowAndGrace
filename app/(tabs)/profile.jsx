@@ -209,14 +209,6 @@ export default function Profile() {
 
           <TouchableOpacity 
             style={styles.linkItem}
-            onPress={() => router.push('/cart/order-details')}
-          >
-            <Text style={styles.linkText}>Order Details</Text>
-            <Ionicons name="chevron-forward" size={24} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.linkItem}
             onPress={() => setIsUploadModalVisible(true)}
           >
             <Text style={styles.linkText}>Become a Seller</Text>

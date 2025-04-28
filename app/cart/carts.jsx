@@ -115,7 +115,7 @@ const CartsPage = () => {
         <TouchableOpacity 
           style={styles.checkoutButton}
           onPress={() => {
-            router.push('/cart/orders');
+            router.push('/cart/checkout');
           }}
         >
           <Text style={styles.checkoutButtonText}>CHECKOUT</Text>

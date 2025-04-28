@@ -49,11 +49,13 @@ const ProductDetails = ({
           </TouchableOpacity>
 
           {/* Product Image */}
-          <Image
-            source={product?.image}
-            style={styles.productImage}
-            resizeMode="contain"
-          />
+          <View style={styles.imageContainer}>
+            <Image
+              source={product?.image}
+              style={styles.productImage}
+              resizeMode="contain"
+            />
+          </View>
 
           {/* Product Info Container */}
           <View style={styles.productInfoContainer}>
@@ -64,7 +66,7 @@ const ProductDetails = ({
             <ScrollView style={styles.descriptionScroll} nestedScrollEnabled>
               <Text
                 style={styles.description}
-                numberOfLines={showFullDescription ? undefined : 6}
+                numberOfLines={showFullDescription ? undefined : 10}
               >
                 {product?.description}
               </Text>
@@ -131,6 +133,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    paddingBottom: 20,
   },
   backButton: {
     position: 'absolute',
@@ -138,27 +141,33 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 1,
   },
+  imageContainer: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+  },
   productImage: {
-    width: '100%',
-    height: 300,
-    marginBottom: 20,
+    width: '80%',
+    height: '80%',
   },
   productInfoContainer: {
     flex: 1,
     paddingHorizontal: 20,
   },
   productName: {
-    fontSize: 20,
+    fontSize: 23,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 15,
     color: '#333',
   },
   descriptionScroll: {
-    maxHeight: 120,
-    marginBottom: 20,
+    maxHeight: 280,
+    marginBottom: 10,
   },
   description: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     lineHeight: 20,
   },
@@ -172,6 +181,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 20,
+    marginTop: 10,
   },
   quantityContainer: {
     flexDirection: 'row',
@@ -212,7 +222,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 15,
     borderTopWidth: 1,
     borderTopColor: '#eee',
     marginTop: 'auto',
