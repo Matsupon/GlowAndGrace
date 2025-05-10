@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { View, TextInput, Text, TouchableOpacity, StyleSheet, Image, SafeAreaView } from 'react-native';
+import { View, TextInput, Text, TouchableOpacity, StyleSheet, Image, SafeAreaView, Alert } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
+import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const [fontsLoaded] = useFonts({
@@ -17,10 +20,45 @@ export default function Login() {
     return null;
   }
 
-  const handleLogin = () => {
-    // Here you would typically validate credentials with your backend
-    // For now, we'll just redirect to the main page
-    router.replace('/(tabs)/home');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.token) {
+          await AsyncStorage.setItem('userToken', data.token); // Save token on successful login
+          await AsyncStorage.setItem('userInfo', JSON.stringify(data.user)); // Save user data (optional)
+          router.replace('/(tabs)/home'); // Redirect to home or dashboard
+        } else {
+          Alert.alert('Error', 'Login successful, but no token received.');
+        }
+      } else {
+        Alert.alert('Error', data.message || 'Login failed');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error. Please try again.');
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -78,12 +116,12 @@ export default function Login() {
             </View>
           </View>
           
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Log In</Text>
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
+            <Text style={styles.loginButtonText}>{isLoading ? 'Logging In...' : 'Log In'}</Text>
           </TouchableOpacity>
           
           <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Don't have account ? </Text>
+            <Text style={styles.signupText}>Don't have an account? </Text>
             <Link href="/auth/signup" asChild>
               <TouchableOpacity>
                 <Text style={styles.signupLink}>Sign Up</Text>

@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
-import { View, TextInput, Text, TouchableOpacity, StyleSheet, Image, SafeAreaView, Animated } from 'react-native';
+import { View, TextInput, Text, TouchableOpacity, StyleSheet, Image, SafeAreaView, Animated, Alert } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import { MaterialIcons } from '@expo/vector-icons';
+import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Signup() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -11,7 +13,9 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -20,6 +24,10 @@ export default function Signup() {
   if (!fontsLoaded) return null;
 
   const handleNext = () => {
+    if (!fullName || !username || !email) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
     Animated.timing(slideAnim, {
       toValue: -1,
       duration: 300,
@@ -35,8 +43,55 @@ export default function Signup() {
     }).start(() => setCurrentStep(1));
   };
 
-  const handleSignup = () => {
-    router.replace('/(tabs)/home');
+  const handleSignup = async () => {
+    if (!address || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          name: fullName,
+          username: username,
+          email: email,
+          address: address,
+          password: password,
+          password_confirmation: confirmPassword, 
+          role: 'user'
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Response:', data);
+
+      if (response.ok) {
+        if (data.token) {
+          await AsyncStorage.setItem('userToken', data.token);
+        }
+        Alert.alert('Success', 'Registration successful!');
+        router.replace('/(tabs)/home');
+      } else {
+        const errorMessage = data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Registration failed');
+        Alert.alert('Error', errorMessage);
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -125,84 +180,104 @@ export default function Signup() {
               </View>
             </View>
 
-            
-
             {/* Step 2 */}
-            <View style={styles.step}>
             {currentStep === 2 && (
-             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-             <MaterialIcons name="arrow-back" size={24} color="#8d2a7b" />
-             </TouchableOpacity>
-            )}
-              <Text style={styles.createAccountText}>Almost There!</Text>
-              <Text style={styles.accountText}>Step 2 of 2</Text>
-              
-              <View style={styles.inputSection}>
-                <Text style={styles.inputLabel}>Address</Text>
-                <View style={styles.inputWrapper}>
-                  <MaterialIcons 
-                    name="location-on" 
-                    size={20} 
-                    color="#8d2a7b" 
-                    style={styles.inputIcon} 
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your address"
-                    placeholderTextColor="#9E9E9E"
-                    value={address}
-                    onChangeText={setAddress}
-                  />
-                </View>
+              <View style={styles.step}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                  <MaterialIcons name="arrow-back" size={24} color="#8d2a7b" />
+                </TouchableOpacity>
 
-                <Text style={[styles.inputLabel, { marginTop: 15 }]}>Password</Text>
-                <View style={styles.inputWrapper}>
-                  <MaterialIcons 
-                    name="lock" 
-                    size={20} 
-                    color="#8d2a7b" 
-                    style={styles.inputIcon} 
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your password"
-                    placeholderTextColor="#9E9E9E"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                  />
-                  <TouchableOpacity 
-                    style={styles.eyeIconContainer}
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
+                <Text style={styles.createAccountText}>Almost There!</Text>
+                <Text style={styles.accountText}>Step 2 of 2</Text>
+
+                <View style={styles.inputSection}>
+                  <Text style={styles.inputLabel}>Address</Text>
+                  <View style={styles.inputWrapper}>
                     <MaterialIcons 
-                      name={showPassword ? 'visibility' : 'visibility-off'} 
+                      name="location-on" 
                       size={20} 
                       color="#8d2a7b" 
+                      style={styles.inputIcon} 
                     />
-                  </TouchableOpacity>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your address"
+                      placeholderTextColor="#9E9E9E"
+                      value={address}
+                      onChangeText={setAddress}
+                    />
+                  </View>
+
+                  <Text style={[styles.inputLabel, { marginTop: 15 }]}>Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <MaterialIcons 
+                      name="lock" 
+                      size={20} 
+                      color="#8d2a7b" 
+                      style={styles.inputIcon} 
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your password"
+                      placeholderTextColor="#9E9E9E"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity 
+                      style={styles.eyeIconContainer}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      <MaterialIcons 
+                        name={showPassword ? 'visibility' : 'visibility-off'} 
+                        size={20} 
+                        color="#8d2a7b" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={[styles.inputLabel, { marginTop: 15 }]}>Confirm Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <MaterialIcons 
+                      name="lock-outline" 
+                      size={20} 
+                      color="#8d2a7b" 
+                      style={styles.inputIcon} 
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Re-enter your password"
+                      placeholderTextColor="#9E9E9E"
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry={true}
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.signupButton} onPress={handleSignup} disabled={isLoading}>
+                  <Text style={styles.signupButtonText}>
+                    {isLoading ? 'Signing up...' : 'Sign Up'}
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.loginContainer}>
+                  <Text style={styles.loginText}>Already have an account? </Text>
+                  <Link href="/auth/login" asChild>
+                    <TouchableOpacity>
+                      <Text style={styles.loginLink}>Login</Text>
+                    </TouchableOpacity>
+                  </Link>
                 </View>
               </View>
-
-              <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
-                <Text style={styles.signupButtonText}>Sign Up</Text>
-              </TouchableOpacity>
-
-              <View style={styles.loginContainer}>
-                <Text style={styles.loginText}>Already have an account? </Text>
-                <Link href="/auth/login" asChild>
-                  <TouchableOpacity>
-                    <Text style={styles.loginLink}>Login</Text>
-                  </TouchableOpacity>
-                </Link>
-              </View>
-            </View>
+            )}
           </Animated.View>
         </View>
       </View>
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  Image, 
-  TouchableOpacity, 
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Image,
+  TouchableOpacity,
   TextInput,
   Modal,
   ScrollView,
-  Pressable
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from 'react-native-vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { API_URL } from '@env';
 import BottomNav from '../../components/layout/BottomNav';
 import ProductUploadModal from '../../components/modals/ProductUploadModal';
 
@@ -20,31 +22,41 @@ export default function Profile() {
   const router = useRouter();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
-  const [productData, setProductData] = useState({
-    name: '',
-    type: 'Skincare',
-    subtype: '',
-    price: '',
-    description: '',
-    productImage: null,
-    fdaImage: null
-  });
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const productTypes = {
-    Skincare: ['Toner', 'Moisturizer', 'Cream', 'Cleanser'],
-    Haircare: ['Shampoo', 'Conditioner', 'Dry Shampoo', 'Hairspray'],
-    Makeup: ['Foundations', 'Concealers', 'Blushes', 'Lip Tints']
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (token) {
+          const response = await axios.get(`${API_URL}/api/user`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          });
+          setUserInfo(response.data.user || response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('userToken');
+    router.replace('/auth/login');
   };
 
   const handleClose = () => {
     router.push('/(tabs)/home');
   };
 
-  const handleLogout = () => {
-    router.replace('/auth/login');
-  };
-
-  // Edit Profile Modal Component
   const EditProfileModal = () => (
     <Modal
       animationType="slide"
@@ -60,66 +72,55 @@ export default function Profile() {
               <Ionicons name="close" size={24} color="#731C82" />
             </TouchableOpacity>
           </View>
-          
           <ScrollView style={styles.modalScroll}>
             <TouchableOpacity style={styles.profileImageEdit}>
-              <Image 
-                source={require('../../assets/images/profilepic.png')} 
-                style={styles.profileImage} 
+              <Image
+                source={require('../../assets/images/profilepic.png')}
+                style={styles.profileImage}
               />
               <View style={styles.editImageButton}>
                 <Ionicons name="camera" size={20} color="#FFF" />
               </View>
             </TouchableOpacity>
-
+            {/* Static fields for now */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Name</Text>
-              <TextInput 
+              <TextInput
                 style={styles.modalInput}
                 placeholder="Enter your name"
-                value="Dianne Javellana"
+                value={userInfo?.name || ''}
+                editable={false}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Username</Text>
-              <TextInput 
+              <TextInput
                 style={styles.modalInput}
                 placeholder="Enter your username"
-                value="Javellana123"
+                value={userInfo?.username || ''}
+                editable={false}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email</Text>
-              <TextInput 
+              <TextInput
                 style={styles.modalInput}
                 placeholder="Enter your email"
-                value="javellana@gmail.com"
+                value={userInfo?.email || ''}
                 keyboardType="email-address"
+                editable={false}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Address</Text>
-              <TextInput 
+              <TextInput
                 style={styles.modalInput}
                 placeholder="Enter your address"
-                value="Brgy. San Juan, Surigao City"
+                value={userInfo?.address || ''}
+                editable={false}
               />
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <TextInput 
-                style={styles.modalInput}
-                placeholder="Enter your password"
-                secureTextEntry
-                value="********"
-              />
-            </View>
-
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.saveButton}
               onPress={() => setIsEditModalVisible(false)}
             >
@@ -130,6 +131,14 @@ export default function Profile() {
       </View>
     </Modal>
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.label}>Loading profile...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -144,52 +153,32 @@ export default function Profile() {
 
       <ScrollView style={styles.content}>
         <View style={styles.profileSection}>
-          <Image 
-            source={require('../../assets/images/profilepic.png')} 
-            style={styles.profileImage} 
+          <Image
+            source={require('../../assets/images/profilepic.png')}
+            style={styles.profileImage}
           />
         </View>
 
         <View style={styles.infoSection}>
           <View style={styles.infoField}>
             <Text style={styles.label}>Name</Text>
-            <TextInput 
-              style={styles.input}
-              value="Dianne Javellana"
-              editable={false}
-            />
+            <TextInput style={styles.input} value={userInfo?.name} editable={false} />
           </View>
-
           <View style={styles.infoField}>
             <Text style={styles.label}>Username</Text>
-            <TextInput 
-              style={styles.input}
-              value="Javellana123"
-              editable={false}
-            />
+            <TextInput style={styles.input} value={userInfo?.username} editable={false} />
           </View>
-
           <View style={styles.infoField}>
             <Text style={styles.label}>Email</Text>
-            <TextInput 
-              style={styles.input}
-              value="javellana@gmail.com"
-              editable={false}
-            />
+            <TextInput style={styles.input} value={userInfo?.email} editable={false} />
           </View>
-
           <View style={styles.infoField}>
             <Text style={styles.label}>Address</Text>
-            <TextInput 
-              style={styles.input}
-              value="Brgy. San Juan, Surigao City"
-              editable={false}
-            />
+            <TextInput style={styles.input} value={userInfo?.address} editable={false} />
           </View>
-
           <View style={styles.infoField}>
             <Text style={styles.label}>Password</Text>
-            <TextInput 
+            <TextInput
               style={styles.input}
               value="********"
               editable={false}
@@ -199,15 +188,12 @@ export default function Profile() {
         </View>
 
         <View style={styles.linksSection}>
-          <TouchableOpacity 
-            style={styles.linkItem}
-            onPress={() => router.push('/cart/orders')}
-          >
+          <TouchableOpacity style={styles.linkItem} onPress={() => router.push('/cart/orders')}>
             <Text style={styles.linkText}>My Orders</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.linkItem}
             onPress={() => setIsUploadModalVisible(true)}
           >
@@ -215,7 +201,7 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.linkItem}
             onPress={() => router.push('/(tabs)/sellerproduct')}
           >
@@ -225,14 +211,14 @@ export default function Profile() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={[styles.button, styles.editButton]} 
+          <TouchableOpacity
+            style={[styles.button, styles.editButton]}
             onPress={() => setIsEditModalVisible(true)}
           >
             <Text style={styles.editButtonText}>EDIT PROFILE</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.button, styles.logoutButton]}
             onPress={handleLogout}
           >
@@ -242,11 +228,10 @@ export default function Profile() {
       </ScrollView>
 
       <EditProfileModal />
-      <ProductUploadModal 
+      <ProductUploadModal
         visible={isUploadModalVisible}
         onClose={() => setIsUploadModalVisible(false)}
       />
-      
       <BottomNav />
     </SafeAreaView>
   );
