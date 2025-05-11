@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +31,7 @@ export default function Profile() {
       try {
         const token = await AsyncStorage.getItem('userToken');
         if (token) {
-          const response = await axios.get(`${API_URL}/api/user`, {
+          const response = await axios.get(`${API_URL}/api/mobile/user`, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
@@ -39,7 +40,13 @@ export default function Profile() {
           setUserInfo(response.data.user || response.data);
         }
       } catch (error) {
-        console.error('Error fetching user profile:', error);
+        if (error.response && error.response.status === 401) {
+          Alert.alert('Session expired', 'Please log in again.');
+          await AsyncStorage.removeItem('userToken');
+          router.replace('/auth/login');
+        } else {
+          console.error('Error fetching user profile:', error);
+        }
       } finally {
         setLoading(false);
       }
@@ -82,7 +89,6 @@ export default function Profile() {
                 <Ionicons name="camera" size={20} color="#FFF" />
               </View>
             </TouchableOpacity>
-            {/* Static fields for now */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Name</Text>
               <TextInput

@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { View, TextInput, Text, TouchableOpacity, StyleSheet, Image, SafeAreaView, Alert } from 'react-native';
+import {
+  View,
+  TextInput,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  SafeAreaView,
+  Alert,
+} from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import { API_URL } from '@env';
@@ -28,7 +37,7 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/login`, {
+      const response = await fetch(`${API_URL}/api/mobile/login`, { // Use the correct API endpoint for login
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,18 +53,20 @@ export default function Login() {
 
       if (response.ok) {
         if (data.token) {
-          await AsyncStorage.setItem('userToken', data.token); // Save token on successful login
-          await AsyncStorage.setItem('userInfo', JSON.stringify(data.user)); // Save user data (optional)
-          router.replace('/(tabs)/home'); // Redirect to home or dashboard
+          // Store the JWT token in AsyncStorage
+          await AsyncStorage.setItem('userToken', data.token);
+          await AsyncStorage.setItem('userInfo', JSON.stringify(data.user)); // Storing user info
+          // Navigate to the home screen
+          router.replace('/(tabs)/home');
         } else {
           Alert.alert('Error', 'Login successful, but no token received.');
         }
       } else {
-        Alert.alert('Error', data.message || 'Login failed');
+        Alert.alert('Login Failed', data.message || 'Invalid credentials');
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
       console.error('Login error:', error);
+      Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -71,13 +82,13 @@ export default function Login() {
         <View style={styles.formContainer}>
           <Text style={styles.welcomeText}>Welcome</Text>
           <Text style={styles.welcomeBackText}>Back!</Text>
-          
+
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>Email</Text>
             <View style={styles.inputWrapper}>
-              <Image 
-                source={require('../../assets/images/email.png')} 
-                style={styles.inputIcon} 
+              <Image
+                source={require('../../assets/images/email.png')}
+                style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
@@ -89,12 +100,12 @@ export default function Login() {
                 autoCapitalize="none"
               />
             </View>
-            
+
             <Text style={[styles.inputLabel, { marginTop: 15 }]}>Password</Text>
             <View style={styles.inputWrapper}>
-              <Image 
-                source={require('../../assets/images/password.png')} 
-                style={styles.inputIcon} 
+              <Image
+                source={require('../../assets/images/password.png')}
+                style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
@@ -104,22 +115,28 @@ export default function Login() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.eyeIconContainer}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Image 
-                  source={require('../../assets/images/eye.png')} 
-                  style={styles.eyeIcon} 
+                <Image
+                  source={require('../../assets/images/eye.png')}
+                  style={styles.eyeIcon}
                 />
               </TouchableOpacity>
             </View>
           </View>
-          
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
-            <Text style={styles.loginButtonText}>{isLoading ? 'Logging In...' : 'Log In'}</Text>
+
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={handleLogin}
+            disabled={isLoading}
+          >
+            <Text style={styles.loginButtonText}>
+              {isLoading ? 'Logging In...' : 'Log In'}
+            </Text>
           </TouchableOpacity>
-          
+
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Don't have an account? </Text>
             <Link href="/auth/signup" asChild>
@@ -128,7 +145,7 @@ export default function Login() {
               </TouchableOpacity>
             </Link>
           </View>
-          
+
           <View style={styles.adminLinkContainer}>
             <Link href="/(tabs)/admin/dashboard" asChild>
               <TouchableOpacity>

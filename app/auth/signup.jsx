@@ -4,7 +4,6 @@ import { Link, useRouter } from 'expo-router';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import { MaterialIcons } from '@expo/vector-icons';
 import { API_URL } from '@env';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Signup() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -56,7 +55,7 @@ export default function Signup() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/register`, {
+      const response = await fetch(`${API_URL}/api/mobile/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,11 +76,8 @@ export default function Signup() {
       console.log('Response:', data);
 
       if (response.ok) {
-        if (data.token) {
-          await AsyncStorage.setItem('userToken', data.token);
-        }
         Alert.alert('Success', 'Registration successful!');
-        router.replace('/(tabs)/home');
+        router.replace('/(tabs)/home'); // Redirect to home after successful signup
       } else {
         const errorMessage = data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Registration failed');
         Alert.alert('Error', errorMessage);
