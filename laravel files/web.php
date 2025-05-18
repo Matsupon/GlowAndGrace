@@ -6,12 +6,21 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 require base_path('routes/admin.php');
+
+Route::get('/test-img', function() {
+    $path = storage_path('app/public/products/H4gVWSB3HW0cTUuMhSTbVE9j6TmPOrFZkj0w2Dl3.png');
+    if (!file_exists($path)) abort(404);
+    return response()->file($path);
+});
+
+Route::get('/storage/products/{filename}', function ($filename) {
+    return response()->file(storage_path("app/public/products/{$filename}"));
+});
 
 Route::get('/', function () {
     return Inertia::render('HomePage/HomePage', [
@@ -29,18 +38,6 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-// API Routes
-Route::prefix('api')->group(function () {
-    // Public routes
-    Route::post('/register', [RegisteredUserController::class, 'store']);
-    Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-    
-    // Protected routes
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
-    });
 });
 
 require __DIR__.'/auth.php';

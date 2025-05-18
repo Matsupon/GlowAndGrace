@@ -47,49 +47,55 @@ export default function Signup() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    
+  
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
-
+  
     setIsLoading(true);
     try {
+      const formData = new FormData();
+      formData.append('name', fullName);
+      formData.append('username', username);
+      formData.append('email', email);
+      formData.append('address', address);
+      formData.append('password', password);
+      formData.append('password_confirmation', confirmPassword);
+      formData.append('role', 'user');
+  
       const response = await fetch(`${API_URL}/api/mobile/register`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          name: fullName,
-          username: username,
-          email: email,
-          address: address,
-          password: password,
-          password_confirmation: confirmPassword, 
-          role: 'user'
-        }),
+        body: formData,
+        credentials: 'include',
       });
-
-      const data = await response.json();
-      console.log('Response:', data);
-
-      if (response.ok) {
-        Alert.alert('Success', 'Registration successful!');
-        router.replace('/(tabs)/home'); // Redirect to home after successful signup
-      } else {
-        const errorMessage = data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Registration failed');
+  
+      if (!response.ok) {
+        const errData = await response.json();
+        console.log('Validation errors:', errData);  // <-- This logs full error details to console
+        const errorMessage = errData.message || (errData.errors ? Object.values(errData.errors).flat().join('\n') : 'Registration failed');
         Alert.alert('Error', errorMessage);
+        throw errData; // This line will be caught below if you want
       }
+  
+      const data = await response.json();
+      Alert.alert('Success', 'Registration successful!');
+      router.replace('/(tabs)/home');
+  
     } catch (error) {
       console.error('Signup error:', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      if (!error.message) {
+        Alert.alert('Error', 'Network error. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
-
+  
+  
   return (
     <SafeAreaView style={styles.container}>
       <Image source={require('../../assets/images/splashscreenBg.png')} style={styles.backgroundImage} />

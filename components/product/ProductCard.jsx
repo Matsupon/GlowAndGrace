@@ -1,17 +1,40 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
+import { normalizeImageUrl } from '../../utils/urlHelpers';
+import { useCart } from '../../contexts/CartContext';
 
-const ProductCard = ({ product, isFavorite, isInCart, onToggleFavorite, onAddToCart, onPress }) => {
+const ProductCard = ({ product, isFavorite, onToggleFavorite, onPress }) => {
+  const { addToCart, removeFromCart, cartItems, isLoading } = useCart();
+  
+  const isInCart = cartItems.some(item => item.product?.id === product.id);
+
+  const handleCartPress = async (e) => {
+    e.stopPropagation();
+    if (isLoading) return;
+
+    try {
+      if (isInCart) {
+        const cartItem = cartItems.find(item => item.product?.id === product.id);
+        await removeFromCart(cartItem.id);
+      } else {
+        await addToCart(product.id);
+      }
+    } catch (error) {
+      console.error('Cart operation failed:', error);
+    }
+  };
+
   return (
     <TouchableOpacity 
       style={styles.productContainer} 
       onPress={() => onPress(product)}
       activeOpacity={0.7}
+      disabled={isLoading}
     >
       <Image 
-        source={product.image} 
-        style={styles.productImage} 
+        source={{ uri: normalizeImageUrl(product.image_url) }}
+        style={styles.productImage}
         resizeMode="contain" 
       />
       <Text style={styles.productName} numberOfLines={2}>
@@ -32,10 +55,8 @@ const ProductCard = ({ product, isFavorite, isInCart, onToggleFavorite, onAddToC
         </TouchableOpacity>
         <Text style={styles.productPrice}>{product.price}</Text>
         <TouchableOpacity 
-          onPress={(e) => {
-            e.stopPropagation();
-            onAddToCart(product);
-          }}
+          onPress={handleCartPress}
+          disabled={isLoading}
         >
           <Ionicons 
             name={isInCart ? 'cart' : 'cart-outline'} 
@@ -60,8 +81,9 @@ const styles = StyleSheet.create({
   },
   productImage: {
     width: '100%',
-    height: 100,
+    height: 80,
     marginBottom: 8,
+    resizeMode: 'contain',
   },
   productName: {
     fontSize: 10.5,

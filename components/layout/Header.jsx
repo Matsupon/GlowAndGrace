@@ -3,9 +3,11 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import { useRouter } from 'expo-router';
+import { useCart } from '../../contexts/CartContext';
 
 const Header = () => {
   const router = useRouter();
+  const { cartCount } = useCart();
   const [fontsLoaded] = useFonts({
     Katibeh_400Regular,
   });
@@ -30,7 +32,7 @@ const Header = () => {
           onPress={() => router.push('/cart/carts')}
         >
           <View style={styles.cartBadge}>
-            <Text style={styles.cartBadgeText}>2</Text>
+            <Text style={styles.cartBadgeText}>{cartCount}</Text>
           </View>
           <Ionicons name="cart-outline" size={30} color="#731C82" />
         </TouchableOpacity>

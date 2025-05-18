@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  Image, 
-  StyleSheet, 
-  ScrollView, 
-  FlatList, 
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
+  FlatList,
   Dimensions,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import { useRouter } from 'expo-router';
 import { Ionicons } from 'react-native-vector-icons';
+import axios from 'axios';
+import { API_URL } from '@env';
+import NetInfo from '@react-native-community/netinfo'; // Make sure to install this
 
 // Custom Components
 import Header from '../../../components/layout/Header';
@@ -22,39 +26,9 @@ import ProductDetails from '../../../components/product/ProductDetails';
 import BottomNav from '../../../components/layout/BottomNav';
 
 const { width } = Dimensions.get('window');
-const SLIDER_ASPECT_RATIO = 21 / 9; // Adjust this based on your image dimensions
+const SLIDER_ASPECT_RATIO = 21 / 9;
 const sliderHeight = width / SLIDER_ASPECT_RATIO;
 
-// Sample product data
-const products = [
-  {
-    id: '1',
-    name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-    price: '₱140',
-    image: require('../../../assets/images/product1.png'),
-    description: 'Kojie San Skin Lightening Pore Minimizing Toner is made with water soluble vitamin b3 known to reduce the appearance of skin blemishes and enlarged pores, while balancing natural natural oil levels for shine-free complexion. It helps improve the skin\'s barrier, preventing the skin from losing water and protecting it from pollutants and toxins, making it gentle on skin. It enhances skin texture and smoothness while reducing hyperpigmentation caused by sun damage giving skin a lighter and more even out skin tone.'
-  },
-  {
-    id: '2',
-    name: 'MYRA E Fresh Glow Whitening Facial Moisturizer',
-    price: '₱140',
-    image: require('../../../assets/images/product2.png')
-  },
-  {
-    id: '3',
-    name: 'BELO SunExpert Dewy Essence Sunscreen SPF50 PA+',
-    price: '₱140',
-    image: require('../../../assets/images/product3.png')
-  },
-  {
-    id: '4',
-    name: 'MAYBELLINE SuperStay Teddy Tint 80 Koop IT Lazy',
-    price: '₱140',
-    image: require('../../../assets/images/product4.png')
-  },
-];
-
-// Sample slider images
 const sliderImages = [
   require('../../../assets/images/slidingimg1.png'),
   require('../../../assets/images/slidingimg2.png'),
@@ -68,34 +42,55 @@ export default function MainPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isProductDetailsVisible, setIsProductDetailsVisible] = useState(false);
+  const [productData, setProductData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const router = useRouter();
   const scrollViewRef = useRef(null);
-  
-  const [fontsLoaded] = useFonts({
-    Katibeh_400Regular,
-  });
+
+  const [fontsLoaded] = useFonts({ Katibeh_400Regular });
 
   useEffect(() => {
-    // Set active category on mount
     setActiveCategory('All');
+    fetchProducts();
+
+    const unsubscribe = NetInfo.addEventListener(state => {
+      console.log('Connection type:', state.type);
+      console.log('Is connected?', state.isConnected);
+    });
+    
+    return () => unsubscribe();
   }, []);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/mainpage/products`);
+      
+      const combineProducts = (products) => products.map(product => ({
+        ...product,
+        image: `${API_URL}/uploads/${product.image}` // Adjust path based on your API
+      }));
+  
+      const combined = [
+        ...combineProducts(response.data.skincareProducts),
+        ...combineProducts(response.data.haircareProducts),
+        ...combineProducts(response.data.makeupProducts),
+      ];
+      
+      setProductData(combined);
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleFavorite = (productId) => {
-    setFavorite(prev => ({
-      ...prev,
-      [productId]: !prev[productId]
-    }));
+    setFavorite(prev => ({ ...prev, [productId]: !prev[productId] }));
   };
 
   const handleAddToCart = (product) => {
-    setCartItems(prev => ({
-      ...prev,
-      [product.id]: !prev[product.id]
-    }));
+    setCartItems(prev => ({ ...prev, [product.id]: !prev[product.id] }));
   };
 
   const handleProductPress = (product) => {
@@ -110,46 +105,33 @@ export default function MainPage() {
 
   const handleAddToCartFromDetails = (quantity) => {
     if (selectedProduct) {
-      setCartItems(prev => ({
-        ...prev,
-        [selectedProduct.id]: true
-      }));
-      // Here you would typically also store the quantity in your cart state
+      setCartItems(prev => ({ ...prev, [selectedProduct.id]: true }));
       console.log(`Added ${quantity} of product ${selectedProduct.id} to cart`);
     }
   };
 
   const handleCartPress = () => {
-    // Navigate to cart
     console.log('Cart pressed');
   };
 
   const handleProfilePress = () => {
-    // Navigate to profile
     console.log('Profile pressed');
   };
 
   const handleCategoryChange = (category) => {
     if (category !== 'All') {
-      // Navigation logic based on category
-      switch(category) {
-        case 'Skincare':
-          router.push('/(tabs)/home/skincare');
-          break;
-        case 'Haircare':
-          router.push('/(tabs)/home/haircare');
-          break;
-        case 'Makeup':
-          router.push('/(tabs)/home/makeup');
-          break;
-        default:
-          break;
+      switch (category) {
+        case 'Skincare': router.push('/(tabs)/home/skincare'); break;
+        case 'Haircare': router.push('/(tabs)/home/haircare'); break;
+        case 'Makeup': router.push('/(tabs)/home/makeup'); break;
       }
     }
     setActiveCategory(category);
   };
-  
-  const renderProduct = ({ item }) => (
+
+  const renderProduct = ({ item }) => {
+    console.log('Image URL:', item.image);
+    return (
     <ProductCard
       product={item}
       isFavorite={favorite[item.id]}
@@ -158,16 +140,14 @@ export default function MainPage() {
       onAddToCart={handleAddToCart}
       onPress={() => handleProductPress(item)}
     />
-  );
+    );
+  };
 
   const handleNextSlide = () => {
     if (currentSliderIndex < sliderImages.length - 1) {
       const newIndex = currentSliderIndex + 1;
       setCurrentSliderIndex(newIndex);
-      scrollViewRef.current.scrollTo({
-        x: width * newIndex,
-        animated: true
-      });
+      scrollViewRef.current.scrollTo({ x: width * newIndex, animated: true });
     }
   };
 
@@ -175,35 +155,25 @@ export default function MainPage() {
     if (currentSliderIndex > 0) {
       const newIndex = currentSliderIndex - 1;
       setCurrentSliderIndex(newIndex);
-      scrollViewRef.current.scrollTo({
-        x: width * newIndex,
-        animated: true
-      });
+      scrollViewRef.current.scrollTo({ x: width * newIndex, animated: true });
     }
   };
 
+  if (!fontsLoaded || loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <Header 
-        onCartPress={handleCartPress}
-        onProfilePress={handleProfilePress}
-      />
-
-      {/* Category Filters */}
-      <CategoryFilters 
-        activeCategory={activeCategory}
-        onCategoryChange={handleCategoryChange}
-      />
-
+      <Header onCartPress={handleCartPress} onProfilePress={handleProfilePress} />
+      <CategoryFilters activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Search Bar */}
-        <SearchBar 
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
-        {/* Slider Images */}
         <View style={styles.sliderContainer}>
           <ScrollView
             ref={scrollViewRef}
@@ -219,44 +189,31 @@ export default function MainPage() {
           >
             {sliderImages.map((image, index) => (
               <View key={index} style={{ width }}>
-                <Image
-                  source={image}
-                  style={styles.sliderImage}
-                  resizeMode="contain"
-                />
+                <Image source={image} style={styles.sliderImage} resizeMode="contain" />
               </View>
             ))}
           </ScrollView>
-          
-          {/* Left Arrow */}
+
           {currentSliderIndex > 0 && (
-            <TouchableOpacity 
-              style={[styles.arrowButton, styles.leftArrow]}
-              onPress={handlePrevSlide}
-            >
+            <TouchableOpacity style={[styles.arrowButton, styles.leftArrow]} onPress={handlePrevSlide}>
               <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           )}
-          
-          {/* Right Arrow */}
+
           {currentSliderIndex < sliderImages.length - 1 && (
-            <TouchableOpacity 
-              style={[styles.arrowButton, styles.rightArrow]}
-              onPress={handleNextSlide}
-            >
+            <TouchableOpacity style={[styles.arrowButton, styles.rightArrow]} onPress={handleNextSlide}>
               <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Featured Products */}
         <Text style={styles.featuredTitle}>Featured products</Text>
-        
+
         <View style={styles.productsGrid}>
           <FlatList
-            data={products}
+            data={productData}
             renderItem={renderProduct}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id.toString()}
             numColumns={2}
             scrollEnabled={false}
             contentContainerStyle={styles.productList}
@@ -264,7 +221,6 @@ export default function MainPage() {
         </View>
       </ScrollView>
 
-      {/* Product Details Modal */}
       <ProductDetails
         visible={isProductDetailsVisible}
         product={selectedProduct}
@@ -274,12 +230,10 @@ export default function MainPage() {
         isFavorite={selectedProduct ? favorite[selectedProduct.id] : false}
       />
 
-      {/* Bottom Navigation */}
       <BottomNav />
     </View>
   );
 }
- 
 
 const styles = StyleSheet.create({
   container: {

@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import { Text } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
+import { CartProvider } from '../contexts/CartContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const router = useRouter();
 
   const [fontsLoaded] = useFonts({
     Katibeh_400Regular,
@@ -18,6 +21,15 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
+        // Check authentication
+        const token = await AsyncStorage.getItem('auth_token');
+        console.log('Auth token exists:', !!token);
+        
+        // If no token and not on auth pages, redirect to login
+        if (!token && !window.location.pathname.includes('/auth/')) {
+          router.replace('/auth/login');
+        }
+
         await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e) {
         console.warn(e);
@@ -28,6 +40,7 @@ export default function RootLayout() {
 
     prepare();
   }, []);
+
 
   const onLayoutRootView = useCallback(async () => {
     if (appIsReady && fontsLoaded) {
@@ -54,16 +67,18 @@ export default function RootLayout() {
   }
 
   return (
-    <PaperProvider>
-      <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="auth/login" />
-          <Stack.Screen name="auth/signup" />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
-      </View>
-    </PaperProvider>
+    <CartProvider>
+      <PaperProvider>
+        <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="auth/login" />
+            <Stack.Screen name="auth/signup" />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        </View>
+      </PaperProvider>
+    </CartProvider>
   );
 }
 

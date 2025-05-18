@@ -38,8 +38,6 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         try {
-            \Log::info('Product upload request received:', $request->all());
-            
             // Validate incoming data
             $validated = $request->validate([
                 'ProductName' => 'required|string',
@@ -47,44 +45,29 @@ class ProductController extends Controller
                 'Price' => 'required|numeric',
                 'TypeID' => 'required|integer',
                 'SubTypeID' => 'required|integer',
-                'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+                'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
                 'fda_image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             ]);
 
-            \Log::info('Validation passed');
-
             $isAdminCreated = (Auth::user()->role === 'admin') ? 1 : 0;
 
-            // Handle product image upload
             $imagePath = null;
             if ($request->hasFile('image')) {
-                \Log::info('Processing product image upload');
-                $image = $request->file('image');
-                $imageName = time() . '_' . $image->getClientOriginalName();
-                $imagePath = $image->storeAs('products', $imageName, 'public');
-                \Log::info('Product image stored at: ' . $imagePath);
-            } else {
-                \Log::error('No product image found in request');
-                throw new \Exception('Product image is required');
+                 $imagePath = $request->file('image')->store('public/products');
             }
 
-            // Handle FDA image upload
             $fdaImagePath = null;
             if ($request->hasFile('fda_image')) {
-                \Log::info('Processing FDA image upload');
-                $fdaImage = $request->file('fda_image');
-                $fdaImageName = time() . '_' . $fdaImage->getClientOriginalName();
-                $fdaImagePath = $fdaImage->storeAs('fda_images', $fdaImageName, 'public');
-                \Log::info('FDA image stored at: ' . $fdaImagePath);
+                $fdaImagePath = $request->file('fda_image')->store('public/fda_image');
             }
 
-            \Log::info('Creating product record');
             $product = Product::create([
                 'name' => $validated['ProductName'],
                 'description' => $validated['Description'] ?? null,
                 'price' => $validated['Price'],
                 'type_id' => $validated['TypeID'],
                 'subtype_id' => $validated['SubTypeID'],
+                'type_id' => $validated['TypeID'],
                 'image' => $imagePath,
                 'fda_image' => $fdaImagePath,
                 'user_id' => Auth::id(),
@@ -92,14 +75,12 @@ class ProductController extends Controller
                 'is_fda_approved' => $isAdminCreated,
             ]);
 
-            \Log::info('Product created successfully', ['product_id' => $product->id]);
 
             $user = Auth::user();
             if ($user->role === 'user') {
                 $user->role = 'PendingSeller';
                 $user->seller_status = true;
                 $user->save();
-                \Log::info('User role updated to PendingSeller');
             }
 
             return response()->json([
@@ -107,12 +88,12 @@ class ProductController extends Controller
                 'product' => $product
             ], 201);
 
+            return response()->json(['message' => 'Product created successfully!'], 201);
         } catch (\Exception $e) {
             \Log::error('Product creation failed:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all(),
-                'files' => $request->allFiles()
+                'request_data' => $request->all()
             ]);
             
             return response()->json([

@@ -34,33 +34,30 @@ export default function Login() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-
+  
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/mobile/login`, { // Use the correct API endpoint for login
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+  
+      const response = await fetch(`${API_URL}/api/mobile/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+        body: formData,
       });
-
+  
       const data = await response.json();
-
+  
       if (response.ok) {
-        if (data.token) {
-          // Store the JWT token in AsyncStorage
-          await AsyncStorage.setItem('userToken', data.token);
-          await AsyncStorage.setItem('userInfo', JSON.stringify(data.user)); // Storing user info
-          // Navigate to the home screen
-          router.replace('/(tabs)/home');
-        } else {
-          Alert.alert('Error', 'Login successful, but no token received.');
-        }
+        // Save the actual token (optional but recommended)
+        await AsyncStorage.setItem('userToken', data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(data.user));
+  
+        // ✅ Go directly to your app's home screen
+        router.replace('/(tabs)/home');
       } else {
         Alert.alert('Login Failed', data.message || 'Invalid credentials');
       }
@@ -71,6 +68,7 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <SafeAreaView style={styles.container}>

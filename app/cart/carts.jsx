@@ -1,43 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 import { useRouter } from 'expo-router';
+import { useCart } from '../../contexts/CartContext';
+import { API_URL } from '@env';
 
-const CartItem = ({ product, onCheckboxChange, onQuantityChange, checked }) => {
+const CartItem = ({ item, onCheckboxChange, onQuantityChange, checked }) => {
+  // Use the same image handling logic as your index.jsx
+  const imageUri = item.product?.image 
+    ? `${API_URL}/uploads/${item.product.image}`
+    : null;
+
+  // Format price safely
+  const formatPrice = (price) => {
+    const numPrice = parseFloat(price);
+    return isNaN(numPrice) ? '0.00' : numPrice.toFixed(2);
+  };
+
   return (
     <View style={styles.cartItemContainer}>
       <TouchableOpacity 
-        style={[
-          styles.checkbox,
-          checked && styles.checkedBox
-        ]}
+        style={[styles.checkbox, checked && styles.checkedBox]}
         onPress={() => onCheckboxChange(!checked)}
       />
       
-      <Image 
-        source={require('../../assets/images/product5.png')}
-        style={styles.productImage}
-        resizeMode="cover"
-      />
+      {imageUri ? (
+        <Image 
+          source={{ uri: imageUri }}
+          style={styles.productImage}
+          resizeMode="contain"
+        />
+      ) : (
+        <View style={[styles.productImage, styles.emptyImage]}>
+          <Ionicons name="image-outline" size={24} color="#ccc" />
+        </View>
+      )}
       
       <View style={styles.productDetails}>
         <Text numberOfLines={2} style={styles.productName}>
-          {product.name}
+          {item.product?.name || 'Product Name'}
         </Text>
-        <Text style={styles.productPrice}>₱{product.price}</Text>
+        <Text style={styles.productPrice}>
+          ₱{formatPrice(item.product?.price)}
+        </Text>
         
         <View style={styles.quantityControl}>
           <TouchableOpacity 
-            onPress={() => onQuantityChange(product.quantity - 1)}
+            onPress={() => onQuantityChange(item.quantity - 1)}
             style={styles.quantityButton}
           >
             <Text style={styles.quantityButtonText}>-</Text>
           </TouchableOpacity>
           
-          <Text style={styles.quantityText}>{product.quantity}</Text>
+          <Text style={styles.quantityText}>{item.quantity}</Text>
           
           <TouchableOpacity 
-            onPress={() => onQuantityChange(product.quantity + 1)}
+            onPress={() => onQuantityChange(item.quantity + 1)}
             style={styles.quantityButton}
           >
             <Text style={styles.quantityButtonText}>+</Text>
@@ -50,40 +68,39 @@ const CartItem = ({ product, onCheckboxChange, onQuantityChange, checked }) => {
 
 const CartsPage = () => {
   const router = useRouter();
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml",
-      price: 140,
-      quantity: 1,
-      checked: false
-    },
-    {
-      id: 2,
-      name: "BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++",
-      price: 140,
-      quantity: 1,
-      checked: false
-    }
-  ]);
+  const { cartItems, removeFromCart } = useCart();
+  const [checkedItems, setCheckedItems] = useState({});
 
   const handleCheckboxChange = (index, checked) => {
-    const newCartItems = [...cartItems];
-    newCartItems[index].checked = checked;
-    setCartItems(newCartItems);
+    setCheckedItems(prev => ({
+      ...prev,
+      [index]: checked
+    }));
   };
 
   const handleQuantityChange = (index, newQuantity) => {
     if (newQuantity < 1) return;
-    const newCartItems = [...cartItems];
-    newCartItems[index].quantity = newQuantity;
-    setCartItems(newCartItems);
+    // Update quantity in local state
+    const updatedItems = [...cartItems];
+    updatedItems[index].quantity = newQuantity;
+  };
+
+  // Format total safely
+  const formatTotal = (total) => {
+    const numTotal = parseFloat(total);
+    return isNaN(numTotal) ? '0.00' : numTotal.toFixed(2);
   };
 
   const calculateTotal = () => {
-    return cartItems
-      .filter(item => item.checked)
-      .reduce((total, item) => total + (item.price * item.quantity), 0);
+    const total = cartItems
+      .filter((_, index) => checkedItems[index])
+      .reduce((sum, item) => {
+        const price = parseFloat(item.product?.price) || 0;
+        const quantity = parseInt(item.quantity) || 0;
+        return sum + (price * quantity);
+      }, 0);
+    
+    return formatTotal(total);
   };
 
   return (
@@ -99,8 +116,8 @@ const CartsPage = () => {
         {cartItems.map((item, index) => (
           <CartItem
             key={item.id}
-            product={item}
-            checked={item.checked}
+            item={item}
+            checked={checkedItems[index] || false}
             onCheckboxChange={(checked) => handleCheckboxChange(index, checked)}
             onQuantityChange={(quantity) => handleQuantityChange(index, quantity)}
           />
@@ -126,6 +143,12 @@ const CartsPage = () => {
 };
 
 const styles = StyleSheet.create({
+  emptyImage: {
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
