@@ -4,6 +4,7 @@ import axios from 'axios';
 import { API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { Alert } from 'react-native';
 
 const CartContext = createContext();
 
@@ -67,10 +68,20 @@ export const CartProvider = ({ children }) => {
 
   const fetchCartItems = async () => {
     try {
-      const response = await api.get('/api/mobile/cart'); 
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setCartItems([]);
+        setCartCount(0);
+        return;
+      }
+
+      const response = await api.get('/api/mobile/cart');
       console.log('Cart items response:', response.data);
-      setCartItems(response.data);
-      setCartCount(response.data.length);
+      
+      // Filter out items that are already ordered
+      const pendingItems = response.data.filter(item => item.status === 'PendingOrder');
+      setCartItems(pendingItems);
+      setCartCount(pendingItems.length);
     } catch (error) {
       console.error('Error fetching cart items:', error);
       if (error.response) {
@@ -111,14 +122,33 @@ export const CartProvider = ({ children }) => {
   const removeFromCart = async (itemId) => {
     try {
       const token = await AsyncStorage.getItem('userToken');
-      if (!token) return;
+      if (!token) {
+        console.log('No token found');
+        return;
+      }
 
-      await api.delete(`/api/mobile/cart/${itemId}`);
-
-      setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
-      setCartCount(prevCount => prevCount - 1);
+      const response = await api.delete(`/api/mobile/cart/${itemId}`);
+      
+      if (response.data) {
+        // Update local state only after successful API call
+        setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
+        setCartCount(response.data.count || 0);
+        
+        // Also remove from checked items in AsyncStorage if it exists
+        const checkedItemsStr = await AsyncStorage.getItem('checkedItems');
+        if (checkedItemsStr) {
+          const checkedItems = JSON.parse(checkedItemsStr);
+          delete checkedItems[itemId];
+          await AsyncStorage.setItem('checkedItems', JSON.stringify(checkedItems));
+        }
+      }
     } catch (error) {
       console.error('Error removing item from cart:', error);
+      // Show error to user
+      Alert.alert(
+        'Error',
+        'Failed to remove item from cart. Please try again.'
+      );
     }
   };
 
@@ -159,6 +189,10 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  const refreshCart = async () => {
+    await fetchCartItems();
+  };
+
   const value = {
     cartItems,
     loading,
@@ -168,7 +202,7 @@ export const CartProvider = ({ children }) => {
     updateCartItemQuantity,
     removeFromCart,
     addToCart,
-    refreshCart: fetchCartItems
+    refreshCart
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

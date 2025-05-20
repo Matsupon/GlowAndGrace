@@ -1,35 +1,88 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import AdminHeader from '../../../components/admin/AdminHeader';
 import Sidebar from '../../../components/admin/Sidebar';
-
-const initialOrders = [
-  {
-    id: 1,
-    productName: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-    status: 'Ordered',
-    details: {
-      productId: 2,
-      userId: 4,
-      userName: 'Mark Cyril Villazon',
-      deliveryAddress: '1500, 112 Benavidez St, San Juan',
-      quantity: 2,
-      totalAmount: 200,
-      paymentMethod: 'Cash on Delivery'
-    }
-  },
-  {
-    id: 2,
-    productName: 'MAYBELLINE SupeStay Teddy Tint 80 Keep IT Cozy',
-    status: 'Added to Cart',
-  }
-];
+import { API_URL } from '@env';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 
 const OrdersList = () => {
-  const [orders, setOrders] = useState(initialOrders);
+  const router = useRouter();
+  const [orders, setOrders] = useState([]);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [isSidebarVisible, setSidebarVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      fetchOrders();
+    }
+  }, [isMounted]);
+
+  const fetchOrders = async () => {
+    try {
+      const token = await AsyncStorage.getItem('adminToken');
+      const adminData = await AsyncStorage.getItem('adminData');
+      
+      if (!token || !adminData) {
+        Alert.alert('Error', 'Please login as admin to continue');
+        if (isMounted) {
+          router.replace('/auth/admin-login');
+        }
+        return;
+      }
+
+      const admin = JSON.parse(adminData);
+      if (admin.role !== 'admin') {
+        Alert.alert('Error', 'You are not authorized to access this page');
+        await AsyncStorage.removeItem('adminToken');
+        await AsyncStorage.removeItem('adminData');
+        if (isMounted) {
+          router.replace('/auth/admin-login');
+        }
+        return;
+      }
+
+      const response = await axios.get(`${API_URL}/api/admin/orders`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data && isMounted) {
+        const filteredOrders = response.data.filter(
+          order => order.status === 'PendingOrder' || order.status === 'Ordered'
+        );
+        setOrders(filteredOrders);
+        console.log(filteredOrders);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      if (error.response?.status === 401) {
+        // Token expired or invalid
+        await AsyncStorage.removeItem('adminToken');
+        await AsyncStorage.removeItem('adminData');
+        if (isMounted) {
+          router.replace('/auth/admin-login');
+        }
+      } else if (isMounted) {
+        Alert.alert('Error', 'Failed to fetch orders');
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+  };
 
   const toggleSidebar = () => {
     setSidebarVisible(!isSidebarVisible);
@@ -41,15 +94,15 @@ const OrdersList = () => {
 
   const OrderItem = ({ order }) => {
     const isExpanded = expandedOrder === order.id;
-    
+  
     return (
       <View style={styles.orderContainer}>
         <TouchableOpacity 
           style={styles.orderHeader} 
-          onPress={() => order.status === 'Ordered' && toggleOrderExpand(order.id)}
+          onPress={() => toggleOrderExpand(order.id)}
         >
           <Text style={styles.orderId}>{order.id}</Text>
-          <Text style={styles.productName}>{order.productName}</Text>
+          <Text style={styles.productName}>Product ID: {order.product_id || 'N/A'}</Text>
           <View style={styles.statusContainer}>
             <Text style={[
               styles.status,
@@ -57,26 +110,22 @@ const OrdersList = () => {
             ]}>
               {order.status}
             </Text>
-            {order.status === 'Ordered' && (
-              <FontAwesome 
-                name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                size={20} 
-                color="#000"
-                style={styles.chevron}
-              />
-            )}
+            <FontAwesome 
+              name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+              size={20} 
+              color="#000"
+              style={styles.chevron}
+            />
           </View>
         </TouchableOpacity>
-
-        {isExpanded && order.details && (
+  
+        {isExpanded && (
           <View style={styles.orderDetails}>
-            <DetailRow label="Product ID" value={order.details.productId} />
-            <DetailRow label="User ID" value={order.details.userId} />
-            <DetailRow label="User Name" value={order.details.userName} />
-            <DetailRow label="Delivery Address" value={order.details.deliveryAddress} />
-            <DetailRow label="Quantity" value={order.details.quantity} />
-            <DetailRow label="Total Amount" value={order.details.totalAmount} />
-            <DetailRow label="Payment Method" value={order.details.paymentMethod} />
+            <DetailRow label="User ID" value={order.user_id} />
+            <DetailRow label="Delivery Address" value={order.delivery_address || 'N/A'} />
+            <DetailRow label="Quantity" value={order.quantity} />
+            <DetailRow label="Total Amount" value={`₱ ${Number(order.total_amount || 0).toFixed(2)}`}/>
+            <DetailRow label="Payment Method" value={order.payment_method || 'N/A'} />
           </View>
         )}
       </View>
@@ -89,6 +138,14 @@ const OrdersList = () => {
       <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#731C82" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -131,6 +188,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
     overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+      },
+    }),
   },
   orderHeader: {
     flexDirection: 'row',
@@ -184,6 +255,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#000',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

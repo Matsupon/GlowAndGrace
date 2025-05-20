@@ -1,28 +1,138 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  TouchableOpacity, 
-  ScrollView,
-  Image,
-  Modal,
-  TextInput
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
+  ScrollView, Image, Modal, TextInput, ActivityIndicator, Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from 'react-native-vector-icons';
+import { useCart } from '../../contexts/CartContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
+import axios from 'axios';
 
 export default function Checkout() {
   const router = useRouter();
+  const { cartItems, refreshCart } = useCart();
+
   const [selectedPayment, setSelectedPayment] = useState('cash');
   const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
-  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
-  const [address, setAddress] = useState('Brgy. San Juan, Surigao City');
+  const [isSuccessModalVisible, setIsSuccessModalVisible] = React.useState(false);
+  const [address, setAddress] = useState('');
   const [tempAddress, setTempAddress] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ✅ Define this FIRST so it's available before use
   const handleBack = () => {
     router.back();
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem('userData');
+        const storedAddress = await AsyncStorage.getItem('deliveryAddress');
+        const storedPayment = await AsyncStorage.getItem('paymentMethod');
+        console.log('[LOAD] User data:', storedUser);
+        console.log('[LOAD] Delivery address:', storedAddress);
+        console.log('[LOAD] Payment method:', storedPayment);
+
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+          setAddress(storedAddress || userData.address || '');
+        }
+
+        if (storedPayment) {
+          setSelectedPayment(storedPayment === 'COD' ? 'cash' : 'card');
+        }
+
+        const checkedItemsStr = await AsyncStorage.getItem('checkedItems');
+        const checkedItems = checkedItemsStr ? JSON.parse(checkedItemsStr) : {};
+        console.log('[LOAD] Checked items from storage:', checkedItems);
+
+        const selected = cartItems.filter((_, index) => checkedItems[index]);
+        setSelectedItems(selected);
+        console.log('[CHECKOUT] Selected items:', selected);
+
+        const total = selected.reduce((sum, item) => {
+          const price = parseFloat(item.product?.price) || 0;
+          const quantity = parseInt(item.quantity) || 0;
+          return sum + (price * quantity);
+        }, 0);
+        setTotalAmount(total);
+        console.log('[CHECKOUT] Total amount:', total);
+      } catch (error) {
+        console.error('[ERROR] Loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [cartItems]);
+
+  const handleOrderNow = async () => {
+    if (selectedItems.length === 0) {
+      Alert.alert('Error', 'Please select items to order');
+      return;
+    }
+    if (!address) {
+      Alert.alert('Error', 'Please add a delivery address');
+      return;
+    }
+  
+    setIsSubmitting(true);
+  
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Error', 'Please login to continue');
+        router.replace('/auth/login');
+        return;
+      }
+  
+      // The selectedItems should be the pending orders (each with an id)
+      const orderIds = selectedItems.map(item => item.id);
+  
+      const payload = {
+        order_ids: orderIds,
+        delivery_address: address,
+        payment_method: selectedPayment === 'cash' ? 'COD' : 'card',
+      };
+  
+      const response = await axios.post(
+        `${API_URL}/api/mobile/checkout`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+  
+      if (response.data.success) {
+        await AsyncStorage.multiRemove([
+          'checkedItems', 'deliveryAddress', 'paymentMethod'
+        ]);
+        await refreshCart();
+        setIsSuccessModalVisible(true);
+      } else {
+        Alert.alert('Error', response.data.error || 'Failed to place order');
+      }
+    } catch (error) {
+      let errorMessage = 'Failed to place order. Please try again.';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditAddress = () => {
@@ -30,102 +140,30 @@ export default function Checkout() {
     setIsAddressModalVisible(true);
   };
 
-  const handleSaveAddress = () => {
+  const handleSaveAddress = async () => {
     setAddress(tempAddress);
     setIsAddressModalVisible(false);
+    await AsyncStorage.setItem('deliveryAddress', tempAddress);
   };
 
-  const handleOrderNow = () => {
-    setIsSuccessModalVisible(true);
+  const handlePaymentChange = async (method) => {
+    setSelectedPayment(method);
+    await AsyncStorage.setItem('paymentMethod', method === 'cash' ? 'COD' : 'card');
   };
 
-  const handleGoBack = () => {
+  const handleCloseSuccessModal = () => {
     setIsSuccessModalVisible(false);
-    router.push('/(tabs)/home');
+    router.replace('/orders');
   };
 
-  // Address Edit Modal Component
-  const AddressEditModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={isAddressModalVisible}
-      onRequestClose={() => setIsAddressModalVisible(false)}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Edit Delivery Address</Text>
-            <TouchableOpacity onPress={() => setIsAddressModalVisible(false)}>
-              <Ionicons name="close" size={24} color="#731C82" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.modalBody}>
-            <Text style={styles.modalLabel}>Delivery Address</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={tempAddress}
-              onChangeText={setTempAddress}
-              placeholder="Enter your delivery address"
-              multiline
-            />
-          </View>
-
-          <TouchableOpacity 
-            style={styles.saveButton}
-            onPress={handleSaveAddress}
-          >
-            <Text style={styles.saveButtonText}>Save Address</Text>
-          </TouchableOpacity>
-        </View>
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#731C82" />
       </View>
-    </Modal>
-  );
+    );
+  }
 
-  // Success Modal Component
-  const SuccessModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={isSuccessModalVisible}
-      onRequestClose={() => setIsSuccessModalVisible(false)}
-    >
-      <View style={styles.successModalContainer}>
-        <View style={styles.successModalContent}>
-          <View style={styles.checkmarkContainer}>
-            <Ionicons name="checkmark" size={40} color="#FFFFFF" />
-          </View>
-          <Text style={styles.successText}>Ordered Successfully!</Text>
-          <TouchableOpacity 
-            style={styles.goBackButton}
-            onPress={handleGoBack}
-          >
-            <Text style={styles.goBackText}>GO BACK</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const products = [
-    {
-      id: 1,
-      name: 'Garnier Micellar Water with Argan Oil (125ml/400mL) - Waterproof Makeup Remover, Cleanser',
-      image: require('../../assets/images/product7.png'),
-      quantity: 1,
-      price: 140
-    },
-    {
-      id: 2,
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      image: require('../../assets/images/product5.png'),
-      quantity: 2,
-      price: 140
-    }
-  ];
-
-  const totalAmount = products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -154,14 +192,21 @@ export default function Checkout() {
           <Text style={styles.orderListTitle}>Order List</Text>
           
           <View style={styles.productsContainer}>
-            {products.map((product) => (
-              <View key={product.id} style={styles.productCard}>
-                <Image source={product.image} style={styles.productImage} />
+            {selectedItems.map((item) => (
+              <View key={item.id} style={styles.productCard}>
+                <Image 
+                  source={{ uri: `${API_URL}/uploads/${item.product.image}` }}
+                  style={styles.productImage}
+                />
                 <View style={styles.productInfo}>
-                  <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+                  <Text style={styles.productName} numberOfLines={2}>
+                    {item.product.name}
+                  </Text>
                   <View style={styles.productDetails}>
-                    <Text style={styles.quantity}>x {product.quantity}</Text>
-                    <Text style={styles.price}>₱ {product.price * product.quantity}.00</Text>
+                    <Text style={styles.quantity}>x {item.quantity}</Text>
+                    <Text style={styles.price}>
+                      ₱ {(item.product.price * item.quantity).toFixed(2)}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -171,13 +216,13 @@ export default function Checkout() {
 
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total:</Text>
-          <Text style={styles.totalAmount}>₱ {totalAmount}.00</Text>
+          <Text style={styles.totalAmount}>₱ {totalAmount.toFixed(2)}</Text>
         </View>
 
         <View style={styles.paymentContainer}>
           <TouchableOpacity 
             style={styles.paymentOption} 
-            onPress={() => setSelectedPayment('cash')}
+            onPress={() => handlePaymentChange('cash')}
           >
             <View style={styles.radioContainer}>
               <View style={[
@@ -195,7 +240,7 @@ export default function Checkout() {
 
           <TouchableOpacity 
             style={styles.paymentOption}
-            onPress={() => setSelectedPayment('card')}
+            onPress={() => handlePaymentChange('card')}
           >
             <View style={styles.radioContainer}>
               <View style={[
@@ -214,14 +259,73 @@ export default function Checkout() {
       </ScrollView>
 
       <TouchableOpacity 
-        style={styles.orderButton}
+        style={[styles.orderButton, isSubmitting && styles.orderButtonDisabled]}
         onPress={handleOrderNow}
+        disabled={isSubmitting}
       >
-        <Text style={styles.orderButtonText}>ORDER NOW</Text>
+        {isSubmitting ? (
+          <ActivityIndicator color="#4E4E4E" />
+        ) : (
+          <Text style={styles.orderButtonText}>ORDER NOW</Text>
+        )}
       </TouchableOpacity>
+ 
+      {isSuccessModalVisible && (
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={isSuccessModalVisible}
+          onRequestClose={() => setIsSuccessModalVisible(false)}
+        >
+          <View style={styles.successModalContainer}>
+            <View style={styles.successModalContent}>
+              <View style={styles.checkmarkContainer}>
+                <Ionicons name="checkmark" size={40} color="#FFFFFF" />
+              </View>
+              <Text style={styles.successText}>Ordered Successfully!</Text>
+              <TouchableOpacity
+                style={styles.goBackButton}
+                onPress={() => {
+                  setIsSuccessModalVisible(false);
+                  router.replace('/(tabs)/home');
+                }}
+              >
+                <Text style={styles.goBackText}>GO BACK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
 
-      <AddressEditModal />
-      <SuccessModal />
+
+{isAddressModalVisible && (
+  <Modal
+    animationType="slide"
+    transparent={true}
+    visible={isAddressModalVisible}
+    onRequestClose={() => setIsAddressModalVisible(false)}
+  >
+    <View style={styles.modalContainer}>
+      <View style={styles.modalContent}>
+        <Text style={styles.modalTitle}>Edit Address</Text>
+        <TextInput
+          style={styles.input}
+          value={tempAddress}
+          onChangeText={setTempAddress}
+          placeholder="Enter new address"
+        />
+        <View style={styles.modalButtonContainer}>
+          <TouchableOpacity onPress={() => setIsAddressModalVisible(false)} style={styles.modalButton}>
+            <Text style={styles.modalButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSaveAddress} style={styles.modalButton}>
+            <Text style={styles.modalButtonText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+)}
     </SafeAreaView>
   );
 }
@@ -390,45 +494,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  orderButtonDisabled: {
+    opacity: 0.7,
+  },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
-    width: '90%',
-    borderRadius: 20,
+    backgroundColor: 'white',
     padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderRadius: 10,
+    width: '80%',
     alignItems: 'center',
-    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#731C82',
+    marginBottom: 10,
   },
-  modalBody: {
-    marginBottom: 20,
-  },
-  modalLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  modalInput: {
+  input: {
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    minHeight: 80,
-    textAlignVertical: 'top',
+    borderColor: '#ccc',
+    padding: 10,
+    marginBottom: 15,
+    borderRadius: 5,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 5,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
   saveButton: {
     backgroundColor: '#731C82',
@@ -455,13 +561,13 @@ const styles = StyleSheet.create({
     width: '80%',
   },
   checkmarkContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#83F793',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   successText: {
     fontSize: 18,
@@ -471,13 +577,19 @@ const styles = StyleSheet.create({
   },
   goBackButton: {
     backgroundColor: '#83F793',
-    paddingVertical: 10,
-    paddingHorizontal: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 40,
     borderRadius: 8,
+    alignItems: 'center',
   },
   goBackText: {
-    color: '#4E4E4E',
-    fontSize: 14,
-    fontWeight: '500',
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

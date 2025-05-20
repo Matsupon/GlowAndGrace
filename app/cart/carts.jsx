@@ -4,6 +4,7 @@ import { Ionicons } from 'react-native-vector-icons';
 import { useRouter } from 'expo-router';
 import { useCart } from '../../contexts/CartContext';
 import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CartItem = ({ item, onCheckboxChange, onQuantityChange, checked }) => {
   // Use the same image handling logic as your index.jsx
@@ -68,21 +69,42 @@ const CartItem = ({ item, onCheckboxChange, onQuantityChange, checked }) => {
 
 const CartsPage = () => {
   const router = useRouter();
-  const { cartItems, removeFromCart } = useCart();
+  const { cartItems, removeFromCart, updateCartItemQuantity } = useCart();
   const [checkedItems, setCheckedItems] = useState({});
 
-  const handleCheckboxChange = (index, checked) => {
-    setCheckedItems(prev => ({
-      ...prev,
+  useEffect(() => {
+    // Load checked items from AsyncStorage when component mounts
+    const loadCheckedItems = async () => {
+      try {
+        const storedCheckedItems = await AsyncStorage.getItem('checkedItems');
+        if (storedCheckedItems) {
+          setCheckedItems(JSON.parse(storedCheckedItems));
+        }
+      } catch (error) {
+        console.error('Error loading checked items:', error);
+      }
+    };
+    loadCheckedItems();
+  }, []);
+
+  const handleCheckboxChange = async (index, checked) => {
+    const newCheckedItems = {
+      ...checkedItems,
       [index]: checked
-    }));
+    };
+    setCheckedItems(newCheckedItems);
+    // Store in AsyncStorage
+    try {
+      await AsyncStorage.setItem('checkedItems', JSON.stringify(newCheckedItems));
+    } catch (error) {
+      console.error('Error saving checked items:', error);
+    }
   };
 
-  const handleQuantityChange = (index, newQuantity) => {
+  const handleQuantityChange = async (index, newQuantity) => {
     if (newQuantity < 1) return;
-    // Update quantity in local state
-    const updatedItems = [...cartItems];
-    updatedItems[index].quantity = newQuantity;
+    const item = cartItems[index];
+    await updateCartItemQuantity(item.id, newQuantity);
   };
 
   // Format total safely

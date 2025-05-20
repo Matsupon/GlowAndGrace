@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class MobileCartController extends Controller
 {
@@ -124,5 +125,86 @@ class MobileCartController extends Controller
                 'error' => 'Failed to update cart item quantity: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function checkout(Request $request)
+    {
+        try {
+            $request->validate([
+                'order_ids' => 'required|array',
+                'delivery_address' => 'required|string',
+                'payment_method' => 'required|in:COD,card'
+            ]);
+
+            \Log::info('Checkout request data:', $request->all());
+
+            $orders = Order::whereIn('id', $request->order_ids)
+                ->where('user_id', Auth::id())
+                ->where('status', 'PendingOrder')
+                ->get();
+
+            if ($orders->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No valid orders found'
+                ], 404);
+            }
+
+            DB::beginTransaction();
+            try {
+                foreach ($orders as $order) {
+                    $product = Product::find($order->product_id);
+                    $order->update([
+                        'status' => 'Ordered',
+                        'delivery_address' => $request->delivery_address,
+                        'payment_method' => $request->payment_method,
+                        'product_name' => $product ? $product->name : null,
+                        'product_image' => $product ? $product->image : null,
+                    ]);
+                }
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Order placed successfully'
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            \Log::error('Checkout error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to place order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAllOrders()
+    {
+        try {
+            $orders = Order::with(['product', 'user'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($orders);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching orders: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to fetch orders: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getMyOrdered()
+    {
+        $orders = Order::with('product')
+            ->where('user_id', Auth::id())
+            ->where('status', 'Ordered')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($orders);
     }
 }

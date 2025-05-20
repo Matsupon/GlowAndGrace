@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,35 +10,32 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from 'react-native-vector-icons';
+import axios from 'axios';
+import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Orders() {
   const router = useRouter();
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await axios.get(`${API_URL}/api/mobile/orders`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrders(response.data);
+    };
+    fetchOrders();
+  }, []);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleProductPress = (productId) => {
-    // For now, all products go to the same order-details page
-    router.push('/cart/order-details');
+  const handleProductPress = (orderId) => {
+    router.push(`/cart/order-details?orderId=${orderId}`);
   };
-
-  const products = [
-    {
-      id: 1,
-      name: 'Garnier Micellar Water with Argan Oil (125ml/400mL) - Waterproof Makeup Remover, Cleanser',
-      image: require('../../assets/images/product7.png'),
-      quantity: 1,
-      price: 140
-    },
-    {
-      id: 2,
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      image: require('../../assets/images/product5.png'),
-      quantity: 2,
-      price: 140
-    }
-  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -51,19 +48,22 @@ export default function Orders() {
 
       <ScrollView style={styles.content}>
         <View style={styles.productsContainer}>
-          {products.map((product) => (
+          {orders.map((order) => (
             <TouchableOpacity
-              key={product.id}
+              key={order.id}
               style={styles.productCard}
-              onPress={() => handleProductPress(product.id)}
+              onPress={() => handleProductPress(order.id)}
               activeOpacity={0.8}
             >
-              <Image source={product.image} style={styles.productImage} />
+              <Image
+                source={{ uri: `${API_URL}/uploads/${order.product?.image}` }}
+                style={styles.productImage}
+              />
               <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+                <Text style={styles.productName} numberOfLines={2}>{order.product?.name}</Text>
                 <View style={styles.productDetails}>
-                  <Text style={styles.quantity}>x {product.quantity}</Text>
-                  <Text style={styles.price}>₱ {product.price * product.quantity}.00</Text>
+                  <Text style={styles.quantity}>x {order.quantity}</Text>
+                  <Text style={styles.price}>₱ {(order.product?.price * order.quantity).toFixed(2)}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -107,6 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     gap: 15,
+    marginBottom: 10,
   },
   productImage: {
     width: 80,
