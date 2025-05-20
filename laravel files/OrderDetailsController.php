@@ -24,10 +24,13 @@ class OrderDetailsController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
+        $validated = $request->validate([
+            'status' => 'required|in:Pending,Shipping,Delivered',
+        ]);
         try {
             $orderDetail = OrderDetail::findOrFail($id);
             $orderDetail->update([
-                'status' => $request->status
+                'status' => $validated['status']
             ]);
 
             return response()->json(['message' => 'Status updated successfully']);
@@ -62,6 +65,37 @@ class OrderDetailsController extends Controller
         } catch (\Exception $e) {
             \Log::error('Order detail delete error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to delete order detail: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function index()
+    {
+        try {
+            $orderDetails = OrderDetail::whereHas('order', function($q) {
+                $q->where('status', 'Ordered');
+            })->with(['order', 'product'])->get();
+            return response()->json($orderDetails);
+        } catch (\Exception $e) {
+            \Log::error('Order details fetch error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch order details: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => 'required|exists:orders,id',
+            'product_id' => 'required|exists:products,id',
+            'quantity' => 'required|integer|min:1',
+            'status' => 'nullable|in:Pending,Shipping,Delivered',
+            'status_description' => 'nullable|string',
+        ]);
+        try {
+            $orderDetail = OrderDetail::create($validated);
+            return response()->json($orderDetail, 201);
+        } catch (\Exception $e) {
+            \Log::error('Order detail create error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to create order detail: ' . $e->getMessage()], 500);
         }
     }
 } 

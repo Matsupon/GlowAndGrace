@@ -10,12 +10,13 @@ class OrderDetail extends Model
         'order_id',
         'product_id',
         'quantity',
+        'total_amount',
         'status',
         'status_description'
     ];
 
     protected $attributes = [
-        'status' => 'Pickup',
+        'status' => 'Pending',
         'status_description' => 'Order is placed'
     ];
 

@@ -13,7 +13,8 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
             $table->integer('quantity');
-            $table->string('status')->default('Pickup');
+            $table->decimal('total_amount', 10, 2)->default(0);
+            $table->string('status')->default('Pending');
             $table->string('status_description')->default('Order is placed');
             $table->timestamps();
         });

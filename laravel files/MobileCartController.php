@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\OrderDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -160,6 +161,15 @@ class MobileCartController extends Controller
                         'payment_method' => $request->payment_method,
                         'product_name' => $product ? $product->name : null,
                         'product_image' => $product ? $product->image : null,
+                    ]);
+
+                    OrderDetail::create([
+                        'order_id' => $order->id,
+                        'product_id' => $order->product_id,
+                        'quantity' => $order->quantity,
+                        'total_amount' => $order->total_amount,
+                        'status' => 'Pending',
+                        'status_description' => 'Order is placed',
                     ]);
                 }
                 DB::commit();

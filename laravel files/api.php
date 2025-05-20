@@ -28,4 +28,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin routes
     Route::get('/admin/orders', [MobileCartController::class, 'getAllOrders']);
+
+    // Order Details routes
+    Route::get('/admin/order-details', [\App\Http\Controllers\OrderDetailsController::class, 'index']);
+    Route::post('/admin/order-details', [\App\Http\Controllers\OrderDetailsController::class, 'store']);
+    Route::put('/admin/order-details/{id}/status', [\App\Http\Controllers\OrderDetailsController::class, 'updateStatus']);
 });
