@@ -1,42 +1,59 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  TouchableOpacity, 
-  ScrollView,
-  Image
+  View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from 'react-native-vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
+import axios from 'axios';
+
+const STATUS_STEPS = [
+  { key: 'Pending', icon: 'cube-outline', label: 'Pickup' },
+  { key: 'Shipping', icon: 'car-outline', label: 'Shipping' },
+  { key: 'Delivered', icon: 'person-outline', label: 'Delivered' },
+];
 
 export default function OrderDetails() {
   const router = useRouter();
+  const [orderDetails, setOrderDetails] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const handleBack = () => {
     router.back();
   };
 
-  const products = [
-    {
-      id: 1,
-      name: 'Garnier Micellar Water with Argan Oil (125ml/400mL) - Waterproof Makeup Remover, Cleanser',
-      image: require('../../assets/images/product7.png'),
-      quantity: 1,
-      price: 140  // ₱140 × 1 = ₱140
-    },
-    {
-      id: 2,
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      image: require('../../assets/images/product5.png'),
-      quantity: 2,
-      price: 140  // ₱140 × 2 = ₱280
-    }
-  ];
+  useEffect(() => {
+    fetchOrderDetails();
+  }, []);
 
-  // Calculation: 140 + (140 × 2) = 420
-  const totalAmount = products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
+  const fetchOrderDetails = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Error', 'Please login to continue');
+        return;
+      }
+      const response = await axios.get(`${API_URL}/api/mobile/order-details`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrderDetails(response.data);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch order details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use the status of the first order detail (or handle multiple if needed)
+  const currentStatus = orderDetails[0]?.status || 'Pending';
+
+  // Calculate total payment amount
+  const totalAmount = orderDetails.reduce(
+    (sum, detail) => sum + (Number(detail.total_amount) || 0),
+    0
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -50,65 +67,68 @@ export default function OrderDetails() {
       <ScrollView style={styles.content}>
         {/* Order Status Section */}
         <View style={styles.statusContainer}>
-          <View style={styles.statusItem}>
-            <View style={[styles.statusIcon, styles.inactiveIcon]}>
-              <Ionicons name="cube-outline" size={24} color="#999" />
-            </View>
-            <Text style={styles.statusText}>Pickup</Text>
-          </View>
-
-          <View style={styles.statusLine} />
-
-          <View style={styles.statusItem}>
-            <View style={[styles.statusIcon, styles.activeIcon]}>
-              <Ionicons name="car-outline" size={24} color="#FFFFFF" />
-            </View>
-            <Text style={styles.statusText}>Shipping</Text>
-          </View>
-
-          <View style={styles.statusLine} />
-
-          <View style={styles.statusItem}>
-            <View style={[styles.statusIcon, styles.inactiveIcon]}>
-              <Ionicons name="person-outline" size={24} color="#999" />
-            </View>
-            <Text style={styles.statusText}>Delivered</Text>
-          </View>
+          {STATUS_STEPS.map((step, idx) => {
+            // Determine if this step is active
+            const activeIdx = STATUS_STEPS.findIndex(s => s.key === currentStatus);
+            const isActive = idx === activeIdx;
+            return (
+              <React.Fragment key={step.key}>
+                <View style={styles.statusItem}>
+                  <View style={[
+                    styles.statusIcon,
+                    isActive ? styles.activeIcon : styles.inactiveIcon
+                  ]}>
+                    <Ionicons name={step.icon} size={24} color={isActive ? "#FFFFFF" : "#999"} />
+                  </View>
+                  <Text style={styles.statusText}>{step.label}</Text>
+                </View>
+                {idx < STATUS_STEPS.length - 1 && <View style={styles.statusLine} />}
+              </React.Fragment>
+            );
+          })}
         </View>
 
         {/* Products List */}
         <Text style={styles.sectionTitle}>Products Ordered</Text>
         <View style={styles.productsContainer}>
-          {products.map((product) => (
-            <View key={product.id} style={styles.productCard}>
-              <Image source={product.image} style={styles.productImage} />
-              <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-                <View style={styles.productDetails}>
-                  <Text style={styles.quantity}>x {product.quantity}</Text>
-                  <Text style={styles.price}>₱ {product.price}.00</Text>
+          {loading ? (
+            <ActivityIndicator color="#731C82" />
+          ) : orderDetails.length === 0 ? (
+            <Text style={{ color: '#888', textAlign: 'center' }}>No products found.</Text>
+          ) : (
+            orderDetails.map((detail) => (
+              <View key={detail.id} style={styles.productCard}>
+                {detail.product?.image ? (
+                  <Image
+                    source={{ uri: `${API_URL}/uploads/${detail.product.image}` }}
+                    style={styles.productImage}
+                  />
+                ) : null}
+                <View style={styles.productInfo}>
+                  <Text style={styles.productName} numberOfLines={2}>
+                    {detail.product?.name || 'Product'}
+                  </Text>
+                  <View style={styles.productDetails}>
+                    <Text style={styles.quantity}>x {detail.quantity}</Text>
+                    <Text style={styles.price}>
+                      ₱{!isNaN(Number(detail.total_amount)) ? Number(detail.total_amount).toFixed(2) : '0.00'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Payment Amount */}
         <View style={styles.paymentContainer}>
           <Text style={styles.paymentLabel}>Payment Amount:</Text>
-          <Text style={styles.paymentAmount}>₱ {totalAmount}.00</Text>
-        </View>
-
-        {/* Tracking Number */}
-        <View style={styles.trackingContainer}>
-          <Text style={styles.trackingLabel}>Tracking Number:</Text>
-          <Text style={styles.trackingNumber}>MP00436467547</Text>
+          <Text style={styles.paymentAmount}>₱ {totalAmount.toFixed(2)}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
 // Keep all styles exactly the same
 const styles = StyleSheet.create({
   container: {
