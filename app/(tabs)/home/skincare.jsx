@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
-  FlatList
+  FlatList, 
+  ActivityIndicator 
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import axios from 'axios';
+import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Custom Components
 import Header from '../../../components/layout/Header';
@@ -25,38 +29,6 @@ const skincareFilters = [
   { label: 'Cleanser', value: 'cleanser', count: 6 }
 ];
 
-// Sample product data
-const products = [
-  {
-    id: '1',
-    name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-    price: '₱140',
-    image: require('../../../assets/images/product1.png'),
-    category: 'toner'
-  },
-  {
-    id: '2',
-    name: 'MYRA E Fresh Glow Whitening MYRA E Fresh Glow Glow Whitening Facial Moisturizer',
-    price: '₱140',
-    image: require('../../../assets/images/product2.png'),
-    category: 'moisturizer'
-  },
-  {
-    id: '3',
-    name: 'BELO Cream SPF50',
-    price: '₱140',
-    image: require('../../../assets/images/product3.png'),
-    category: 'cream'
-  },
-  {
-    id: '4',
-    name: 'CELETEQUE Hydration Facial Moisturizer',
-    price: '₱140',
-    image: require('../../../assets/images/product2.png'),
-    category: 'cleanser'
-  },
-];
-
 export default function SkincarePage() {
   const [activeCategory, setActiveCategory] = useState('Skincare');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -64,7 +36,37 @@ export default function SkincarePage() {
   const [favorite, setFavorite] = useState({});
   const [cartItems, setCartItems] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      // Try to get from AsyncStorage first
+      const cached = await AsyncStorage.getItem('skincareProducts');
+      if (cached) {
+        setProducts(JSON.parse(cached));
+        setLoading(false);
+      }
+      // Always fetch fresh data
+      const response = await axios.get(`${API_URL}/mainpage/products`);
+      const skincare = (response.data.skincareProducts || []).map(product => ({
+        ...product,
+        // image_url is already set by backend
+      }));
+      setProducts(skincare);
+      await AsyncStorage.setItem('skincareProducts', JSON.stringify(skincare));
+    } catch (error) {
+      console.error('Failed to fetch skincare products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleFavorite = (productId) => {
     setFavorite(prev => ({
@@ -125,7 +127,11 @@ export default function SkincarePage() {
   // Filter products based on active filter
   const filteredProducts = activeFilter === 'all'
     ? products
-    : products.filter(product => product.category === activeFilter);
+    : products.filter(product => {
+        // Map filter value to subtype name (case-insensitive)
+        if (!product.subtype_name) return false;
+        return product.subtype_name.toLowerCase().includes(activeFilter.replace('-', '').toLowerCase());
+      });
   
   const renderProduct = ({ item }) => (
     <ProductCard
@@ -167,6 +173,8 @@ export default function SkincarePage() {
           filterOptions={skincareFilters}
           onSelectFilter={handleFilterSelect}
           activeFilter={activeFilter}
+          storageKey="skincareProducts"
+          products={products}
         />
 
         {/* Skincare Products */}
@@ -180,16 +188,20 @@ export default function SkincarePage() {
           )}
         </View>
         
+        {loading ? (
+          <ActivityIndicator size="large" color="#731C82" style={{ marginTop: 40 }} />
+        ) : (
         <View style={styles.productsGrid}>
           <FlatList
             data={filteredProducts}
             renderItem={renderProduct}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id.toString()}
             numColumns={2}
             scrollEnabled={false}
             contentContainerStyle={styles.productList}
           />
         </View>
+        )}
       </ScrollView>
       
       {/* Bottom Navigation */}

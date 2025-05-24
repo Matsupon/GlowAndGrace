@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AdminHeader from '../../../components/admin/AdminHeader';
 import Sidebar from '../../../components/admin/Sidebar';
 import PendingSellerModal from '../../../components/admin/PendingSellerModal';
-
-const initialPendingSellers = [
-  { id: 3, name: 'Kristine Arado' },
-];
+import { useFocusEffect } from '@react-navigation/native';
+import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DeleteConfirmationModal = ({ visible, onClose, onConfirm }) => (
   <Modal transparent visible={visible} animationType="fade">
     <View style={styles.modalOverlay}>
       <View style={styles.confirmationModal}>
-        <Text style={styles.confirmationText}>Are you sure you want reject/delete this user?</Text>
+        <Text style={styles.confirmationText}>Are you sure you want to reject/delete this product?</Text>
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={[styles.button, styles.yesButton]} onPress={onConfirm}>
             <Text style={styles.buttonText}>YES</Text>
@@ -34,76 +33,139 @@ const SuccessModal = ({ visible }) => (
         <View style={styles.checkmarkContainer}>
           <Ionicons name="checkmark" size={40} color="white" />
         </View>
-        <Text style={styles.successText}>User deleted successfully!</Text>
+        <Text style={styles.successText}>Product deleted successfully!</Text>
       </View>
     </View>
   </Modal>
 );
 
 const PendingSellers = () => {
-  const [pendingSellers, setPendingSellers] = useState(initialPendingSellers);
+  const [userToken, setUserToken] = useState(null);
+  const [pendingProducts, setPendingProducts] = useState([]);
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
-  const [selectedSeller, setSelectedSeller] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [sellerToDelete, setSellerToDelete] = useState(null);
+  const [productToDelete, setProductToDelete] = useState(null);
 
-  const toggleSidebar = () => {
-    setSidebarVisible(!isSidebarVisible);
-  };
 
-  const handleViewDetails = (seller) => {
-    setSelectedSeller(seller);
+  useEffect(() => {
+    const getToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        setUserToken(token);
+      } catch (error) {
+        console.error('Error retrieving token:', error);
+      }
+    };
+    getToken();
+  }, []);
+
+  // Fetch pending products from backend
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchPendingProducts = async () => {
+        try {
+          const token = await AsyncStorage.getItem('userToken');
+          const res = await fetch(`${API_URL}/api/pending-products`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          const data = await res.json();
+          setPendingProducts(data);
+        } catch (e) {
+          console.error('Fetch error:', e);
+          setPendingProducts([]);
+        }
+      };
+      fetchPendingProducts();
+    }, [])
+  );
+
+  const toggleSidebar = () => setSidebarVisible(!isSidebarVisible);
+
+  const handleViewDetails = (product) => {
+    setSelectedProduct(product);
     setModalVisible(true);
   };
 
-  const handleDeletePress = (seller) => {
-    setSellerToDelete(seller);
+  const handleDeletePress = (product) => {
+    setProductToDelete(product);
     setShowDeleteConfirmation(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setPendingSellers(pendingSellers.filter(seller => seller.id !== sellerToDelete.id));
-    setShowDeleteConfirmation(false);
-    setShowSuccessMessage(true);
-    setTimeout(() => {
-      setShowSuccessMessage(false);
-    }, 2000);
+  const handleDeleteConfirm = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (productToDelete) {
+        await fetch(`${API_URL}/api/products/${productToDelete.id}`, { 
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      setPendingProducts(prev => prev.filter(p => p.product_id !== productToDelete.product_id));
+      setShowDeleteConfirmation(false);
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 2000);
+    } catch (error) {
+      console.error('Delete error:', error);
+    }
   };
 
-  const handleAcceptSeller = () => {
-    if (selectedSeller) {
-      setPendingSellers(pendingSellers.filter(seller => seller.id !== selectedSeller.id));
+  const handleAcceptProduct = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (selectedProduct) {
+        await fetch(`${API_URL}/api/products/${selectedProduct.id}/approve`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        setPendingProducts(prev => prev.filter(p => p.id !== selectedProduct.id));
+      }
+      setModalVisible(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error('Approval error:', error);
     }
-    setModalVisible(false);
-    setSelectedSeller(null);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={styles.container}>
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={isSidebarVisible} onClose={toggleSidebar} />
       
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#731C82', marginBottom: 20, textAlign: 'center' }}>PENDING SELLER LIST</Text>
+      <View style={styles.content}>
+        <Text style={styles.title}>PENDING PRODUCT APPROVALS</Text>
+        
         <FlatList
-          data={pendingSellers}
-          keyExtractor={(item) => item.id.toString()}
+          data={pendingProducts}
+          keyExtractor={(item) => item.product_id.toString()}
           renderItem={({ item }) => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#FDEFFF', padding: 20, borderRadius: 8 }}>
-              <Text style={{ flex: 1, fontSize: 18 }}>{item.id}</Text>
-              <View style={{ flex: 4 }}>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#731C82' }}>{item.name}</Text>
-              </View>
+            <View style={styles.productCard}>
+              <Text style={styles.idText}>{item.user_id || item.product_id}</Text>
+              <Text style={styles.nameText} numberOfLines={1}>
+                {item.seller_name || item.user_name || item.name}
+              </Text>
               <TouchableOpacity 
-                style={{ marginRight: 15 }}
+                style={styles.viewButton}
                 onPress={() => handleViewDetails(item)}
               >
-                <Text style={{ color: '#731C82'}}>View Details</Text>
+                <Text style={styles.viewButtonText}>View Details</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDeletePress(item)}>
-                <Ionicons name="trash" size={24} color="red" />
+              <TouchableOpacity 
+                style={styles.deleteButton}
+                onPress={() => handleDeletePress(item)}
+              >
+                <Ionicons name="trash-outline" size={24} color="#FF3B30" />
               </TouchableOpacity>
             </View>
           )}
@@ -113,8 +175,8 @@ const PendingSellers = () => {
       <PendingSellerModal
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
-        seller={selectedSeller}
-        onAccept={handleAcceptSeller}
+        seller={selectedProduct}
+        onAccept={handleAcceptProduct}
       />
 
       <DeleteConfirmationModal
@@ -129,6 +191,81 @@ const PendingSellers = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#731C82',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  productCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F9F9F9',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 2,
+  },
+  idText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  nameText: {
+    marginLeft: 20,
+    flex: 1,
+    fontSize: 15,
+    color: '#666',
+  },
+  productImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 15,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  sellerName: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  price: {
+    fontSize: 14,
+    color: '#731C82',
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  viewButton: {
+    marginRight: 15,
+  },
+  viewButtonText: {
+    color: '#731C82',
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    marginLeft: 'auto',
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

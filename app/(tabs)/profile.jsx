@@ -37,6 +37,8 @@ export default function Profile() {
     fdaImage: null
   });
 
+  const [userToken, setUserToken] = useState(null);
+
   const productTypes = {
     Skincare: ['Toner', 'Moisturizer', 'Cream', 'Cleanser'],
     Haircare: ['Shampoo', 'Conditioner', 'Dry Shampoo', 'Hairspray'],
@@ -47,8 +49,12 @@ export default function Profile() {
     const fetchUserFromStorage = async () => {
       try {
         const storedUser = await AsyncStorage.getItem('userData');
+        const storedToken = await AsyncStorage.getItem('userToken');
         if (storedUser) {
           setUser(JSON.parse(storedUser));
+        }
+        if (storedToken) {
+          setUserToken(storedToken);
         }
       } catch (error) {
         console.error('Error loading user:', error);
@@ -245,13 +251,16 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.linkItem}
-            onPress={() => router.push('/(tabs)/sellerproduct')}
-          >
-            <Text style={styles.linkText}>My Products</Text>
-            <Ionicons name="chevron-forward" size={24} color="#666" />
-          </TouchableOpacity>
+          {/* Only show My Products if user is a Seller */}
+          {user?.role?.toLowerCase() === 'seller' && (
+            <TouchableOpacity
+              style={styles.linkItem}
+              onPress={() => router.push('/(tabs)/sellerproduct')}
+            >
+              <Text style={styles.linkText}>My Products</Text>
+              <Ionicons name="chevron-forward" size={24} color="#666" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.buttonContainer}>
@@ -275,6 +284,9 @@ export default function Profile() {
       <ProductUploadModal
         visible={isUploadModalVisible}
         onClose={() => setIsUploadModalVisible(false)}
+        userId={user?.id}
+        userName={user?.name}
+        userToken={userToken}
       />
 
       <BottomNav />

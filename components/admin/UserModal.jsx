@@ -1,20 +1,69 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
 
-const UserModal = ({ visible, onClose, user }) => {
-  const [role, setRole] = useState(user.role);
+// Helper functions for role mapping
+const backendToPickerRole = (role) => {
+  if (role === 'admin') return 'ADMIN';
+  if (role === 'seller') return 'SELLER';
+  if (role === 'user') return 'CUSTOMER';
+  return role?.toUpperCase() || '';
+};
+const pickerToBackendRole = (role) => {
+  if (role === 'ADMIN') return 'admin';
+  if (role === 'SELLER') return 'seller';
+  if (role === 'CUSTOMER') return 'user';
+  return role?.toLowerCase() || '';
+};
+
+const UserModal = ({ visible, onClose, user, onUserUpdated }) => {
+  const [role, setRole] = useState(backendToPickerRole(user.role));
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState(user.username);
   const [fullName, setFullName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [address, setAddress] = useState(user.address);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setRole(backendToPickerRole(user.role));
+    setUsername(user.username);
+    setFullName(user.name);
+    setEmail(user.email);
+    setAddress(user.address);
+  }, [user]);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('adminToken');
+      await axios.put(`${API_URL}/api/admin/users/${user.id}`, {
+        name: fullName,
+        username,
+        email,
+        address,
+        role: pickerToBackendRole(role),
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsEditing(false);
+      onUserUpdated && onUserUpdated();
+      Alert.alert('Success', 'User updated successfully');
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update user');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide">
       <View style={styles.container}>
-        <TouchableOpacity onPress={onClose} style={styles.header}>
+        <TouchableOpacity onPress={onClose} style={styles.header} disabled={loading}>
           <Ionicons name="arrow-back" size={24} color="#800080" />
           <Text style={styles.headerText}>{fullName}</Text>
         </TouchableOpacity>
@@ -24,7 +73,7 @@ const UserModal = ({ visible, onClose, user }) => {
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Username:</Text>
           <TextInput
-            editable={isEditing}
+            editable={isEditing && !loading}
             value={username}
             onChangeText={setUsername}
             style={styles.input}
@@ -33,7 +82,7 @@ const UserModal = ({ visible, onClose, user }) => {
           
           <Text style={styles.label}>Full Name:</Text>
           <TextInput
-            editable={isEditing}
+            editable={isEditing && !loading}
             value={fullName}
             onChangeText={setFullName}
             style={styles.input}
@@ -42,7 +91,7 @@ const UserModal = ({ visible, onClose, user }) => {
           
           <Text style={styles.label}>Email:</Text>
           <TextInput
-            editable={isEditing}
+            editable={isEditing && !loading}
             value={email}
             onChangeText={setEmail}
             style={styles.input}
@@ -51,7 +100,7 @@ const UserModal = ({ visible, onClose, user }) => {
           
           <Text style={styles.label}>Address:</Text>
           <TextInput
-            editable={isEditing}
+            editable={isEditing && !loading}
             value={address}
             onChangeText={setAddress}
             style={[styles.input, styles.addressInput]}
@@ -67,7 +116,7 @@ const UserModal = ({ visible, onClose, user }) => {
             <Picker
               selectedValue={role}
               onValueChange={(itemValue) => setRole(itemValue)}
-              enabled={isEditing}
+              enabled={isEditing && !loading}
               style={styles.picker}
               dropdownIconColor="#800080"
             >
@@ -76,10 +125,11 @@ const UserModal = ({ visible, onClose, user }) => {
               <Picker.Item label="Customer" value="CUSTOMER" />
             </Picker>
             <TouchableOpacity 
-              onPress={() => setIsEditing(!isEditing)} 
+              onPress={isEditing ? handleSave : () => setIsEditing(true)} 
               style={styles.editButton}
+              disabled={loading}
             >
-              <Text style={styles.editButtonText}>{isEditing ? 'Save' : 'Edit'}</Text>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.editButtonText}>{isEditing ? 'Save' : 'Edit'}</Text>}
             </TouchableOpacity>
           </View>
         </View>

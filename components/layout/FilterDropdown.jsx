@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -8,8 +8,41 @@ import {
   FlatList
 } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const FilterDropdown = ({ visible, onClose, filterOptions, onSelectFilter, activeFilter }) => {
+const FilterDropdown = ({ visible, onClose, filterOptions, onSelectFilter, activeFilter, storageKey, products: propProducts }) => {
+  const [optionsWithCounts, setOptionsWithCounts] = useState(filterOptions);
+
+  useEffect(() => {
+    const updateCounts = async () => {
+      let products = propProducts;
+      if (!products && storageKey) {
+        const cached = await AsyncStorage.getItem(storageKey);
+        if (cached) {
+          products = JSON.parse(cached);
+        }
+      }
+      if (products) {
+        // Count for each filter option
+        const updated = filterOptions.map(option => {
+          if (option.value === 'all') {
+            return { ...option, count: products.length };
+          }
+          // Try to match subtype_name (case-insensitive, hyphens ignored)
+          const count = products.filter(product => {
+            if (!product.subtype_name) return false;
+            return product.subtype_name.toLowerCase().includes(option.value.replace('-', '').toLowerCase());
+          }).length;
+          return { ...option, count };
+        });
+        setOptionsWithCounts(updated);
+      } else {
+        setOptionsWithCounts(filterOptions);
+      }
+    };
+    if (visible) updateCounts();
+  }, [visible, filterOptions, storageKey, propProducts]);
+
   const renderFilterItem = ({ item }) => (
     <TouchableOpacity 
       style={[
@@ -54,7 +87,7 @@ const FilterDropdown = ({ visible, onClose, filterOptions, onSelectFilter, activ
           </View>
           
           <FlatList
-            data={filterOptions}
+            data={optionsWithCounts}
             renderItem={renderFilterItem}
             keyExtractor={(item) => item.value}
             contentContainerStyle={styles.listContainer}

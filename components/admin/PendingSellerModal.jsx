@@ -6,6 +6,8 @@ const PendingSellerModal = ({ visible, onClose, seller, onAccept }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  if (!seller) return null;
+
   const handleAccept = () => {
     setShowConfirmModal(true);
   };
@@ -26,37 +28,40 @@ const PendingSellerModal = ({ visible, onClose, seller, onAccept }) => {
       <View style={styles.container}>
         <TouchableOpacity onPress={onClose} style={styles.header}>
           <Ionicons name="arrow-back" size={24} color="#800080" />
-          <Text style={styles.headerText}>Kristine Arado</Text>
+          <Text style={styles.headerText}>{seller.seller_name || seller.customer_name || seller.user_name || seller.name}</Text>
         </TouchableOpacity>
 
         <ScrollView style={styles.scrollView}>
           <View style={styles.contentContainer}>
-            <Image
-              source={require('../../assets/images/product9.png')}
-              style={styles.productImage}
-              resizeMode="contain"
-            />
+            {seller.image_url && (
+              <Image
+                source={{ uri: seller.image_url }}
+                style={styles.productImage}
+                resizeMode="contain"
+              />
+            )}
 
-            <Text style={styles.productName}>
-              TRESEMME Keratin Smooth Anti-Frizz Shampoo 340ml
-            </Text>
+            <Text style={styles.productName}>{seller.name}</Text>
+            {seller.type && seller.subtype && (
+              <Text style={styles.productType}>{seller.type} - {seller.subtype}</Text>
+            )}
 
             <View style={styles.infoContainer}>
               <Text style={styles.label}>Price:</Text>
-              <Text style={styles.price}>₱110.00</Text>
+              <Text style={styles.price}>₱{seller.price}</Text>
 
               <Text style={styles.label}>Description:</Text>
-              <Text style={styles.description}>
-                Our Salon Quality formula is expertly crafted with Kera10 Protein Complex that cleanses thoroughly and deeply penetrates into the core of hair to nourish dry and frizzy hair, giving you 10 salon benefits in one wash.
-              </Text>
+              <Text style={styles.description}>{seller.description}</Text>
             </View>
 
-            <Text style={styles.fdaLabel}>FDA Approved Image:</Text>
-            <Image
-              source={require('../../assets/images/fda.jpg')}
-              style={styles.fdaImage}
-              resizeMode="contain"
-            />
+            <Text style={styles.fdaLabel}>FDA Uploaded Image:</Text>
+            {seller.fda_image_url && (
+              <Image
+                source={{ uri: seller.fda_image_url }}
+                style={styles.fdaImage}
+                resizeMode="contain"
+              />
+            )}
 
             <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
               <Text style={styles.acceptButtonText}>Accept Seller</Text>
@@ -147,6 +152,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'center',
+  },
+  productType: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 15,
   },
   infoContainer: {
     backgroundColor: '#F7F8F9',

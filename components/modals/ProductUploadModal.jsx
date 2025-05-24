@@ -6,23 +6,53 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  ScrollView,
   Pressable,
-  Image,
+  ScrollView,
   Alert,
-  Animated
+  Image,
 } from 'react-native';
-import { Ionicons } from 'react-native-vector-icons';
+import { Ionicons } from '@expo/vector-icons'; // fix import for Ionicons
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { API_URL } from '@env';
 
-const productTypes = {
-  Skincare: ['Toner', 'Moisturizer', 'Cream', 'Cleanser'],
-  Haircare: ['Shampoo', 'Conditioner', 'Dry Shampoo', 'Hairspray'],
-  Makeup: ['Foundations', 'Concealers', 'Blushes', 'Lip Tints']
+const productSubtypes = {
+  Skincare: [
+    { id: 1, name: 'Cream' },
+    { id: 2, name: 'Moisturizer' },
+    { id: 3, name: 'Sunscreen' },
+    { id: 4, name: 'Toner' },
+  ],
+  Haircare: [
+    { id: 5, name: 'Conditioner' },
+    { id: 6, name: 'Dry Shampoo' },
+    { id: 7, name: 'Hairspray' },
+    { id: 8, name: 'Shampoo' },
+  ],
+  Makeup: [
+    { id: 9, name: 'Blushes' },
+    { id: 10, name: 'Concealers' },
+    { id: 11, name: 'Foundations' },
+    { id: 12, name: 'Lip Tints' },
+  ],
 };
 
-const ProductUploadModal = ({ visible, onClose }) => {
+const typeMap = {
+  Skincare: 1,
+  Haircare: 2,
+  Makeup: 3,
+};
+
+// Create subtypeMap for easy lookup of subtype IDs
+const subtypeMap = {};
+for (const [type, subtypes] of Object.entries(productSubtypes)) {
+  subtypeMap[type] = {};
+  subtypes.forEach((st) => {
+    subtypeMap[type][st.name] = st.id;
+  });
+}
+
+const ProductUploadModal = ({ visible, onClose, userId, userName, userToken }) => {
   const [productData, setProductData] = useState({
     name: '',
     type: 'Skincare',
@@ -30,7 +60,7 @@ const ProductUploadModal = ({ visible, onClose }) => {
     price: '',
     description: '',
     productImage: null,
-    fdaImage: null
+    fdaImage: null,
   });
 
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
@@ -58,13 +88,13 @@ const ProductUploadModal = ({ visible, onClose }) => {
       visible={showTypeDropdown}
       onRequestClose={() => setShowTypeDropdown(false)}
     >
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.dropdownOverlay}
         activeOpacity={1}
         onPress={() => setShowTypeDropdown(false)}
       >
         <View style={styles.dropdownList}>
-          {Object.keys(productTypes).map((type) => (
+          {Object.keys(productSubtypes).map((type) => (
             <TouchableOpacity
               key={type}
               style={styles.dropdownItem}
@@ -72,15 +102,17 @@ const ProductUploadModal = ({ visible, onClose }) => {
                 setProductData({
                   ...productData,
                   type,
-                  subtype: ''
+                  subtype: '',
                 });
                 setShowTypeDropdown(false);
               }}
             >
-              <Text style={[
-                styles.dropdownItemText,
-                productData.type === type && styles.dropdownItemTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.dropdownItemText,
+                  productData.type === type && styles.dropdownItemTextActive,
+                ]}
+              >
                 {type}
               </Text>
             </TouchableOpacity>
@@ -97,29 +129,31 @@ const ProductUploadModal = ({ visible, onClose }) => {
       visible={showSubtypeDropdown}
       onRequestClose={() => setShowSubtypeDropdown(false)}
     >
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.dropdownOverlay}
         activeOpacity={1}
         onPress={() => setShowSubtypeDropdown(false)}
       >
         <View style={styles.dropdownList}>
-          {productTypes[productData.type].map((subtype) => (
+          {productSubtypes[productData.type].map((subtype) => (
             <TouchableOpacity
-              key={subtype}
+              key={subtype.id}
               style={styles.dropdownItem}
               onPress={() => {
                 setProductData({
                   ...productData,
-                  subtype
+                  subtype: subtype.name,
                 });
                 setShowSubtypeDropdown(false);
               }}
             >
-              <Text style={[
-                styles.dropdownItemText,
-                productData.subtype === subtype && styles.dropdownItemTextActive
-              ]}>
-                {subtype}
+              <Text
+                style={[
+                  styles.dropdownItemText,
+                  productData.subtype === subtype.name && styles.dropdownItemTextActive,
+                ]}
+              >
+                {subtype.name}
               </Text>
             </TouchableOpacity>
           ))}
@@ -138,9 +172,9 @@ const ProductUploadModal = ({ visible, onClose }) => {
       });
 
       if (!result.canceled) {
-        setProductData(prev => ({
+        setProductData((prev) => ({
           ...prev,
-          [type]: result.assets[0].uri
+          [type]: result.assets[0].uri,
         }));
       }
     } catch (error) {
@@ -148,33 +182,106 @@ const ProductUploadModal = ({ visible, onClose }) => {
     }
   };
 
-  const handleUpload = () => {
-    // Show success popup regardless of validation for testing
-    setShowSuccessPopup(true);
-    setTimeout(() => {
-      setShowSuccessPopup(false);
-      // Reset form and close modal
-      setProductData({
-        name: '',
-        type: 'Skincare',
-        subtype: '',
-        price: '',
-        description: '',
-        productImage: null,
-        fdaImage: null
+  const getFileName = (uri) => uri.split('/').pop();
+
+  const mimeTypeMap = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    bmp: 'image/bmp',
+    webp: 'image/webp',
+  };
+
+  const getMimeType = (uri) => {
+    const match = /\.(\w+)$/.exec(uri);
+    const ext = match ? match[1].toLowerCase() : 'jpg';
+    return mimeTypeMap[ext] || 'application/octet-stream';
+  };
+
+  const handleUpload = async () => {
+    try {
+      if (!productData.name || !productData.type || !productData.subtype || !productData.price) {
+        Alert.alert('Error', 'Please fill in all required fields.');
+        return;
+      }
+
+      const typeId = typeMap[productData.type];
+      const subtypeId = subtypeMap[productData.type][productData.subtype];
+
+      if (!typeId || !subtypeId) {
+        Alert.alert('Error', 'Invalid product type or subtype.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('ProductName', productData.name);
+      formData.append('Description', productData.description);
+      formData.append('Price', productData.price);
+      formData.append('TypeID', typeId);
+      formData.append('SubTypeID', subtypeId);
+
+      if (productData.productImage) {
+        formData.append('image', {
+          uri: productData.productImage,
+          name: getFileName(productData.productImage),
+          type: getMimeType(productData.productImage),
+        });
+      }
+
+      if (productData.fdaImage) {
+        formData.append('fda_image', {
+          uri: productData.fdaImage,
+          name: getFileName(productData.fdaImage),
+          type: getMimeType(productData.fdaImage),
+        });
+      }
+
+      // Debugging form data
+      for (let pair of formData.entries()) {
+        console.log(`${pair[0]}:`, pair[1]);
+      }
+
+      const url = `${API_URL}/api/products/store`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          // 'Content-Type': 'multipart/form-data' is omitted to let fetch set it correctly with boundary
+          ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}),
+        },
+        body: formData,
       });
-      onClose();
-      // Navigate to home
-      router.push('/(tabs)/home');
-    }, 2000);
+
+      const data = await res.json();
+      console.log('Upload response:', res.status, data);
+
+      if (res.ok) {
+        setShowSuccessPopup(true);
+        setTimeout(() => {
+          setShowSuccessPopup(false);
+          setProductData({
+            name: '',
+            type: 'Skincare',
+            subtype: '',
+            price: '',
+            description: '',
+            productImage: null,
+            fdaImage: null,
+          });
+          onClose();
+          router.push('/(tabs)/home');
+        }, 2000);
+      } else {
+        Alert.alert('Error', data.message || 'Failed to upload product.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to upload product.');
+      console.log('Upload error:', error);
+    }
   };
 
   const SuccessPopup = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={showSuccessPopup}
-    >
+    <Modal animationType="fade" transparent visible={showSuccessPopup}>
       <View style={styles.successOverlay}>
         <View style={styles.successPopup}>
           <View style={styles.successIconContainer}>

@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
-  FlatList
+  FlatList, 
+  ActivityIndicator 
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import axios from 'axios';
+import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Custom Components
 import Header from '../../../components/layout/Header';
@@ -25,38 +29,6 @@ const makeupFilters = [
   { label: 'Lip Tints', value: 'lip-tint', count: 6 }
 ];
 
-// Sample product data
-const products = [
-  {
-    id: '1',
-    name: 'MAYBELLINE Fit Me Matte Poreless Foundation',
-    price: '₱140',
-    image: require('../../../assets/images/product4.png'),
-    category: 'foundation'
-  },
-  {
-    id: '2',
-    name: 'SUNNIES FACE Fluffmatte Lipstick',
-    price: '₱140',
-    image: require('../../../assets/images/product2.png'),
-    category: 'lip-tint'
-  },
-  {
-    id: '3',
-    name: 'L\'OREAL Infallible Pro-Matte Liquid Lipstick',
-    price: '₱140',
-    image: require('../../../assets/images/product3.png'),
-    category: 'lip-tint'
-  },
-  {
-    id: '4',
-    name: 'DETAIL Makeover Powder Foundation',
-    price: '₱140',
-    image: require('../../../assets/images/product1.png'),
-    category: 'foundation'
-  },
-];
-
 export default function MakeupPage() {
   const [activeCategory, setActiveCategory] = useState('Makeup');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -64,7 +36,37 @@ export default function MakeupPage() {
   const [favorite, setFavorite] = useState({});
   const [cartItems, setCartItems] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      // Try to get from AsyncStorage first
+      const cached = await AsyncStorage.getItem('makeupProducts');
+      if (cached) {
+        setProducts(JSON.parse(cached));
+        setLoading(false);
+      }
+      // Always fetch fresh data
+      const response = await axios.get(`${API_URL}/mainpage/products`);
+      const makeup = (response.data.makeupProducts || []).map(product => ({
+        ...product,
+        // image_url is already set by backend
+      }));
+      setProducts(makeup);
+      await AsyncStorage.setItem('makeupProducts', JSON.stringify(makeup));
+    } catch (error) {
+      console.error('Failed to fetch makeup products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleFavorite = (productId) => {
     setFavorite(prev => ({
@@ -125,7 +127,10 @@ export default function MakeupPage() {
   // Filter products based on active filter
   const filteredProducts = activeFilter === 'all'
     ? products
-    : products.filter(product => product.category === activeFilter);
+    : products.filter(product => {
+        if (!product.subtype_name) return false;
+        return product.subtype_name.toLowerCase().includes(activeFilter.replace('-', '').toLowerCase());
+      });
   
   const renderProduct = ({ item }) => (
     <ProductCard
@@ -167,6 +172,8 @@ export default function MakeupPage() {
           filterOptions={makeupFilters}
           onSelectFilter={handleFilterSelect}
           activeFilter={activeFilter}
+          storageKey="makeupProducts"
+          products={products}
         />
 
         {/* Makeup Products */}
@@ -180,16 +187,20 @@ export default function MakeupPage() {
           )}
         </View>
         
+        {loading ? (
+          <ActivityIndicator size="large" color="#731C82" style={{ marginTop: 40 }} />
+        ) : (
         <View style={styles.productsGrid}>
           <FlatList
             data={filteredProducts}
             renderItem={renderProduct}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id.toString()}
             numColumns={2}
             scrollEnabled={false}
             contentContainerStyle={styles.productList}
           />
         </View>
+        )}
       </ScrollView>
       
       {/* Bottom Navigation */}

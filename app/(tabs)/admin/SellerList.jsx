@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AdminHeader from '../../../components/admin/AdminHeader';
 import Sidebar from '../../../components/admin/Sidebar';
 
-const initialSellers = [
-  { id: 2, name: 'Norielle Serato' },
-];
-
-const SellerList = () => {
-  const [sellers, setSellers] = useState(initialSellers);
+const SellerList = forwardRef((props, ref) => {
+  const [sellers, setSellers] = useState([
+    { id: 2, name: 'Norielle Serato' },
+  ]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedSellerId, setSelectedSellerId] = useState(null);
   const [isSidebarVisible, setSidebarVisible] = useState(false);
+ 
+  useImperativeHandle(ref, () => ({
+    addSeller: (seller) => {
+      setSellers((prev) => [...prev, seller]);
+    },
+  }));
 
   const toggleSidebar = () => {
     setSidebarVisible(!isSidebarVisible);
@@ -27,8 +31,7 @@ const SellerList = () => {
   const confirmDemote = () => {
     setShowConfirmModal(false);
     setShowSuccessModal(true);
-    
-    // Remove the seller after 1 second
+     
     setTimeout(() => {
       setSellers(sellers.filter(seller => seller.id !== selectedSellerId));
       setShowSuccessModal(false);
@@ -58,8 +61,7 @@ const SellerList = () => {
           )}
         />
       </View>
-
-      {/* Confirmation Modal */}
+ 
       <Modal
         visible={showConfirmModal}
         transparent={true}
@@ -86,8 +88,7 @@ const SellerList = () => {
           </View>
         </View>
       </Modal>
-
-      {/* Success Modal */}
+ 
       <Modal
         visible={showSuccessModal}
         transparent={true}
@@ -104,7 +105,7 @@ const SellerList = () => {
       </Modal>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   modalContainer: {

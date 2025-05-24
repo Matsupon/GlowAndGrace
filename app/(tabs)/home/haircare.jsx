@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
-  FlatList
+  FlatList, 
+  ActivityIndicator 
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import axios from 'axios';
+import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Custom Components
 import Header from '../../../components/layout/Header';
@@ -25,38 +29,6 @@ const haircareFilters = [
   { label: 'Hairspray', value: 'hairspray', count: 6 }
 ];
 
-// Sample product data
-const products = [
-  {
-    id: '1',
-    name: 'DOVE Intensive Repair Shampoo',
-    price: '₱140',
-    image: require('../../../assets/images/product3.png'),
-    category: 'shampoo'
-  },
-  {
-    id: '2',
-    name: 'CREAM SILK Ultra Treatment Conditioner',
-    price: '₱140',
-    image: require('../../../assets/images/product2.png'),
-    category: 'conditioner'
-  },
-  {
-    id: '3',
-    name: 'PANTENE Pro-V Total Damage Control',
-    price: '₱140',
-    image: require('../../../assets/images/product1.png'),
-    category: 'shampoo'
-  },
-  {
-    id: '4',
-    name: 'HUMAN NATURE Strengthening Shampoo',
-    price: '₱140',
-    image: require('../../../assets/images/product4.png'),
-    category: 'dry-shampoo'
-  },
-];
-
 export default function HaircarePage() {
   const [activeCategory, setActiveCategory] = useState('Haircare');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -64,7 +36,37 @@ export default function HaircarePage() {
   const [favorite, setFavorite] = useState({});
   const [cartItems, setCartItems] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      // Try to get from AsyncStorage first
+      const cached = await AsyncStorage.getItem('haircareProducts');
+      if (cached) {
+        setProducts(JSON.parse(cached));
+        setLoading(false);
+      }
+      // Always fetch fresh data
+      const response = await axios.get(`${API_URL}/mainpage/products`);
+      const haircare = (response.data.haircareProducts || []).map(product => ({
+        ...product,
+        // image_url is already set by backend
+      }));
+      setProducts(haircare);
+      await AsyncStorage.setItem('haircareProducts', JSON.stringify(haircare));
+    } catch (error) {
+      console.error('Failed to fetch haircare products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleFavorite = (productId) => {
     setFavorite(prev => ({
@@ -125,7 +127,10 @@ export default function HaircarePage() {
   // Filter products based on active filter
   const filteredProducts = activeFilter === 'all'
     ? products
-    : products.filter(product => product.category === activeFilter);
+    : products.filter(product => {
+        if (!product.subtype_name) return false;
+        return product.subtype_name.toLowerCase().includes(activeFilter.replace('-', '').toLowerCase());
+      });
   
   const renderProduct = ({ item }) => (
     <ProductCard
@@ -167,6 +172,8 @@ export default function HaircarePage() {
           filterOptions={haircareFilters}
           onSelectFilter={handleFilterSelect}
           activeFilter={activeFilter}
+          storageKey="haircareProducts"
+          products={products}
         />
 
         {/* Haircare Products */}
@@ -180,16 +187,20 @@ export default function HaircarePage() {
           )}
         </View>
         
+        {loading ? (
+          <ActivityIndicator size="large" color="#731C82" style={{ marginTop: 40 }} />
+        ) : (
         <View style={styles.productsGrid}>
           <FlatList
             data={filteredProducts}
             renderItem={renderProduct}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id.toString()}
             numColumns={2}
             scrollEnabled={false}
             contentContainerStyle={styles.productList}
           />
         </View>
+        )}
       </ScrollView>
       
       {/* Bottom Navigation */}

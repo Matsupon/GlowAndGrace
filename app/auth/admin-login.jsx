@@ -47,7 +47,6 @@ export default function AdminLogin() {
       const data = await response.json();
   
       if (response.ok) {
-        // ✅ Check if the logged-in user is an admin
         if (data.user.role !== 'admin') {
           Alert.alert('Access Denied', 'You are not authorized as admin.');
           return;
