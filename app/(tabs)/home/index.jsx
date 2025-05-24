@@ -16,6 +16,7 @@ import { Ionicons } from 'react-native-vector-icons';
 import axios from 'axios';
 import { API_URL } from '@env';
 import NetInfo from '@react-native-community/netinfo'; // Make sure to install this
+import { normalizeImageUrl, normalizeFdaImageUrl } from '../../../utils/urlHelpers';
 
 // Custom Components
 import Header from '../../../components/layout/Header';
@@ -68,7 +69,7 @@ export default function MainPage() {
       
       const combineProducts = (products) => products.map(product => ({
         ...product,
-        image: `${API_URL}/uploads/${product.image}` // Adjust path based on your API
+        image: normalizeImageUrl(product.image) // Adjust path based on your API
       }));
   
       const combined = [
@@ -130,16 +131,15 @@ export default function MainPage() {
   };
 
   const renderProduct = ({ item }) => {
-    console.log('Image URL:', item.image);
     return (
-    <ProductCard
-      product={item}
-      isFavorite={favorite[item.id]}
-      isInCart={cartItems[item.id]}
-      onToggleFavorite={toggleFavorite}
-      onAddToCart={handleAddToCart}
-      onPress={() => handleProductPress(item)}
-    />
+      <ProductCard
+        product={item}
+        isFavorite={favorite[item.id]}
+        isInCart={cartItems[item.id]}
+        onToggleFavorite={toggleFavorite}
+        onAddToCart={handleAddToCart}
+        onPress={() => handleProductPress(item)}
+      />
     );
   };
 

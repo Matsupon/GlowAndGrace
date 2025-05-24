@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
 
 const PendingSellerModal = ({ visible, onClose, seller, onAccept }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -35,7 +36,7 @@ const PendingSellerModal = ({ visible, onClose, seller, onAccept }) => {
           <View style={styles.contentContainer}>
             {seller.image_url && (
               <Image
-                source={{ uri: seller.image_url }}
+                source={{ uri: normalizeImageUrl(seller.image_url) }}
                 style={styles.productImage}
                 resizeMode="contain"
               />
@@ -57,7 +58,7 @@ const PendingSellerModal = ({ visible, onClose, seller, onAccept }) => {
             <Text style={styles.fdaLabel}>FDA Uploaded Image:</Text>
             {seller.fda_image_url && (
               <Image
-                source={{ uri: seller.fda_image_url }}
+                source={{ uri: normalizeFdaImageUrl(seller.fda_image_url) }}
                 style={styles.fdaImage}
                 resizeMode="contain"
               />

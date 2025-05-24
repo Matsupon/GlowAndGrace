@@ -9,6 +9,7 @@ import { useCart } from '../../contexts/CartContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@env';
 import axios from 'axios';
+import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
 
 export default function Checkout() {
   const router = useRouter();
@@ -195,7 +196,7 @@ export default function Checkout() {
             {selectedItems.map((item) => (
               <View key={item.id} style={styles.productCard}>
                 <Image 
-                  source={{ uri: `${API_URL}/uploads/${item.product.image}` }}
+                  source={{ uri: normalizeImageUrl(item.product.image) }}
                   style={styles.productImage}
                 />
                 <View style={styles.productInfo}>

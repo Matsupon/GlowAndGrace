@@ -10,7 +10,7 @@ import {
   ScrollView
 } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
-import { normalizeImageUrl } from '../../utils/urlHelpers';
+import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
 
 const ProductDetails = ({
   visible,
@@ -52,8 +52,8 @@ const ProductDetails = ({
           {/* Product Image */}
           <View style={styles.imageContainer}>
             <Image
-              source={product?.image_url ? 
-                { uri: normalizeImageUrl(product.image_url) } : 
+              source={product?.image ? 
+                { uri: normalizeImageUrl(product.image) } : 
                 { uri: 'https://via.placeholder.com/150' }}
               style={styles.productImage}
               resizeMode="contain"

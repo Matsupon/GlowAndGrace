@@ -7,6 +7,7 @@ import { Ionicons } from 'react-native-vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@env';
 import axios from 'axios';
+import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
 
 const STATUS_STEPS = [
   { key: 'Pending', icon: 'cube-outline', label: 'Pickup' },
@@ -100,7 +101,7 @@ export default function OrderDetails() {
               <View key={detail.id} style={styles.productCard}>
                 {detail.product?.image ? (
                   <Image
-                    source={{ uri: `${API_URL}/uploads/${detail.product.image}` }}
+                    source={{ uri: normalizeImageUrl(detail.product.image) }}
                     style={styles.productImage}
                   />
                 ) : null}

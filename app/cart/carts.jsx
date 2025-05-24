@@ -5,11 +5,12 @@ import { useRouter } from 'expo-router';
 import { useCart } from '../../contexts/CartContext';
 import { API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
 
 const CartItem = ({ item, onCheckboxChange, onQuantityChange, checked }) => {
   // Use the same image handling logic as your index.jsx
   const imageUri = item.product?.image 
-    ? `${API_URL}/uploads/${item.product.image}`
+    ? normalizeImageUrl(item.product.image)
     : null;
 
   // Format price safely

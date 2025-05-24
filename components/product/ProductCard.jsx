@@ -33,7 +33,7 @@ const ProductCard = ({ product, isFavorite, onToggleFavorite, onPress }) => {
       disabled={isLoading}
     >
       <Image 
-        source={{ uri: normalizeImageUrl(product.image_url) }}
+        source={{ uri: normalizeImageUrl(product.image) }}
         style={styles.productImage}
         resizeMode="contain" 
       />

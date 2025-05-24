@@ -13,6 +13,7 @@ import { Ionicons } from 'react-native-vector-icons';
 import axios from 'axios';
 import { API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
 
 export default function Orders() {
   const router = useRouter();
@@ -56,7 +57,7 @@ export default function Orders() {
               activeOpacity={0.8}
             >
               <Image
-                source={{ uri: `${API_URL}/uploads/${order.product?.image}` }}
+                source={{ uri: normalizeImageUrl(order.product?.image) }}
                 style={styles.productImage}
               />
               <View style={styles.productInfo}>
