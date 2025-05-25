@@ -13,28 +13,38 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-//admin skincare page display
+    //fetch admin skincarepage
 public function fetchAdminSkincareProducts(Request $request)
 {
-    // Skincare type_id = 1, subtypes: 1 (cream), 2 (moisturizer), 3 (sunscreen), 4 (toners)
-    $subtypeIds = [1, 2, 3, 4];
-    $products = \App\Models\Product::where('type_id', 1)
-        ->whereIn('subtype_id', $subtypeIds)
-        ->get()
-        ->map(function ($product) {
-            return [
-                'id' => $product->id,
-                'name' => $product->name,
-                'description' => $product->description,
-                'price' => $product->price,
-                'image' => $product->image ? asset('storage/' . $product->image) : null,
-                'subtype_id' => $product->subtype_id,
-            ];
-        });
+    try {
+        $user = $request->user();
+        if (!$user || !$user->isAdmin()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
 
-    return response()->json($products);
+        $products = Product::where('type_id', 1)
+            ->whereIn('subtype_id', [1, 2, 3, 4])
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'description' => $product->description,
+                    'price' => $product->price,
+                    'image' => $product->image ? asset('storage/' . $product->image) : null,
+                    'subtype_id' => $product->subtype_id,
+                ];
+            });
+
+        return response()->json($products);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Server Error',
+            'message' => $e->getMessage()
+        ], 500);
+    }
 }
-
     
 //mobile product upload
 public function storeMobile(Request $request)
@@ -645,8 +655,149 @@ public function getSellerProducts()
         }
     }
 
+    /**
+     * Fetch sellers (role = 'seller') with their pending products (not FDA approved, not admin created).
+     * Returns only sellers who have at least one such product.
+     */
+    public function fetchSellersWithPendingProducts()
+    {
+        $sellers = \App\Models\User::where('role', 'seller')
+            ->with(['products' => function ($query) {
+                $query->where('is_fda_approved', false)
+                      ->where(function ($q) {
+                          $q->where('is_admin_created', 0)
+                            ->orWhere('is_admin_created', false);
+                      });
+            }])
+            ->get()
+            ->filter(function ($user) {
+                return $user->products->count() > 0;
+            })
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'products' => $user->products->map(function ($product) {
+                        return [
+                            'id' => $product->id,
+                            'name' => $product->name,
+                            'price' => $product->price,
+                            'description' => $product->description,
+                            'image_url' => $product->image ? asset('storage/' . $product->image) : null,
+                            'fda_image_url' => $product->fda_image ? asset('storage/' . $product->fda_image) : null,
+                            'created_at' => $product->created_at ? $product->created_at->toDateTimeString() : null,
+                        ];
+                    })->values(),
+                ];
+            })->values();
 
+        return response()->json($sellers, 200, ['Content-Type' => 'application/json']);
+    }
 
+    public function storeAdmin(Request $request)
+    {
+        try {
+            // Only allow admins
+            $user = $request->user();
+            if (!$user || $user->role !== 'admin') {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
 
+            $validated = $request->validate([
+                'ProductName' => 'required|string|max:255',
+                'Description' => 'nullable|string',
+                'Price' => 'required|numeric|min:0',
+                'TypeID' => 'required|integer|exists:producttypes,TypeID',
+                'SubTypeID' => 'required|integer|exists:productsubtypes,SubTypeID',
+                'image' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+                'fda_image' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+            ]);
+
+            $imagePath = $request->file('image')->store('products', 'public');
+            $fdaImagePath = $request->file('fda_image')->store('fda_approvals', 'public');
+
+            $product = Product::create([
+                'name' => $validated['ProductName'],
+                'description' => $validated['Description'] ?? null,
+                'price' => $validated['Price'],
+                'type_id' => $validated['TypeID'],
+                'subtype_id' => $validated['SubTypeID'],
+                'image' => $imagePath,
+                'fda_image' => $fdaImagePath,
+                'user_id' => $user->id,
+                'is_admin_created' => 1,
+                'is_fda_approved' => 1,
+            ]);
+
+            return response()->json([
+                'message' => 'Product uploaded successfully!',
+                'product' => $product
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'messages' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Product upload failed',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAllProductsByType(Request $request)
+    {
+        // Accepts ?type=skincare|makeup|haircare
+        $type = $request->query('type');
+        $typeMap = [
+            'skincare' => 1,
+            'haircare' => 2,
+            'makeup' => 3,
+        ];
+
+        if (!isset($typeMap[$type])) {
+            return response()->json(['error' => 'Invalid type'], 400);
+        }
+
+        $products = \App\Models\Product::where('type_id', $typeMap[$type])
+            ->with('subtype') // eager load subtype if you want to use subtype_name
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'description' => $product->description,
+                    'price' => $product->price,
+                    'image_url' => $product->image ? asset('storage/' . $product->image) : null,
+                    'subtype_id' => $product->subtype_id,
+                    'subtype_name' => $product->subtype->SubTypeName ?? null,
+                ];
+            });
+
+        return response()->json(['products' => $products], 200, ['Content-Type' => 'application/json']);
+    }
+
+    public function fetchSellers()
+    {
+        $sellers = \App\Models\User::where('role', 'seller')
+            ->get(['id', 'name', 'username']);
+        return response()->json($sellers, 200, ['Content-Type' => 'application/json']);
+    }
+
+    public function demoteSeller($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        if ($user->role !== 'seller') {
+            return response()->json(['error' => 'User is not a seller'], 400);
+        }
+        $user->role = 'user';
+        $user->seller_status = false;
+        $user->save();
+        return response()->json(['message' => 'Seller demoted to customer successfully']);
+    }
 
 }

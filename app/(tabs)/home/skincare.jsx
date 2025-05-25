@@ -26,7 +26,7 @@ const skincareFilters = [
   { label: 'Toner', value: 'toner', count: 6 },
   { label: 'Moisturizer', value: 'moisturizer', count: 6 },
   { label: 'Cream', value: 'cream', count: 6 },
-  { label: 'Sunscreen', value: 'sunscreen', count: 6 }
+  { label: 'Cleanser', value: 'cleanser', count: 6 }
 ];
 
 export default function SkincarePage() {

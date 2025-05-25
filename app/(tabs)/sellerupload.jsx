@@ -9,17 +9,52 @@ import {
   Pressable,
   Image,
   Alert,
-  Modal
+  Modal,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from 'react-native-vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { API_URL } from '@env';
+import * as FileSystem from 'expo-file-system';
 
-const productTypes = {
-  Skincare: ['Toner', 'Moisturizer', 'Cream', 'Cleanser'],
-  Haircare: ['Shampoo', 'Conditioner', 'Dry Shampoo', 'Hairspray'],
-  Makeup: ['Foundations', 'Concealers', 'Blushes', 'Lip Tints']
+const productSubtypes = {
+  Skincare: [
+    { id: 1, name: 'Cream' },
+    { id: 2, name: 'Moisturizer' },
+    { id: 3, name: 'Sunscreen' },
+    { id: 4, name: 'Toner' },
+  ],
+  Haircare: [
+    { id: 5, name: 'Conditioner' },
+    { id: 6, name: 'Dry Shampoo' },
+    { id: 7, name: 'Hairspray' },
+    { id: 8, name: 'Shampoo' },
+  ],
+  Makeup: [
+    { id: 9, name: 'Blushes' },
+    { id: 10, name: 'Concealers' },
+    { id: 11, name: 'Foundations' },
+    { id: 12, name: 'Lip Tints' },
+  ],
 };
+
+const typeMap = {
+  Skincare: 1,
+  Haircare: 2,
+  Makeup: 3,
+};
+
+const subtypeMap = {};
+for (const [type, subtypes] of Object.entries(productSubtypes)) {
+  subtypeMap[type] = {};
+  subtypes.forEach((st) => {
+    subtypeMap[type][st.name] = st.id;
+  });
+}
 
 export default function SellerUpload() {
   const router = useRouter();
@@ -30,11 +65,39 @@ export default function SellerUpload() {
     price: '',
     description: '',
     productImage: null,
+    fdaImage: null,
   });
-
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showSubtypeDropdown, setShowSubtypeDropdown] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [userToken, setUserToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('userToken');
+        if (!storedToken) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        setUserToken(storedToken);
+        // Fetch user info from API
+        const response = await axios.get(`${API_URL}/api/mobile/user`, {
+          headers: { Authorization: `Bearer ${storedToken}` },
+        });
+        setUser(response.data);
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -54,17 +117,16 @@ export default function SellerUpload() {
 
   const pickImage = async (type) => {
     try {
-      let result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 0.8,
       });
-
-      if (!result.canceled) {
-        setProductData(prev => ({
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setProductData((prev) => ({
           ...prev,
-          [type]: result.assets[0].uri
+          [type]: result.assets[0].uri,
         }));
       }
     } catch (error) {
@@ -72,13 +134,108 @@ export default function SellerUpload() {
     }
   };
 
-  const handleUpload = () => {
-    // Show success popup regardless of validation for testing
-    setShowSuccessPopup(true);
-    setTimeout(() => {
-      setShowSuccessPopup(false);
-      router.push('/(tabs)/home');
-    }, 2000);
+  // Helper: Detect image MIME type and extension
+  const getFileInfo = (uri) => {
+    const extension = uri.split('.').pop().toLowerCase();
+    const mimeTypes = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+    };
+    return {
+      type: mimeTypes[extension] || 'image/jpeg',
+      extension: extension || 'jpg',
+    };
+  };
+
+  const prepareFormData = async () => {
+    const formData = new FormData();
+    formData.append('ProductName', productData.name);
+    formData.append('Description', productData.description);
+    formData.append('Price', productData.price);
+    formData.append('TypeID', typeMap[productData.type]);
+    formData.append('SubTypeID', subtypeMap[productData.type][productData.subtype]);
+    // Product Image
+    if (productData.productImage) {
+      const fileInfo = await FileSystem.getInfoAsync(productData.productImage);
+      if (fileInfo.exists) {
+        const { type, extension } = getFileInfo(productData.productImage);
+        formData.append('image', {
+          uri: productData.productImage,
+          name: `product_${Date.now()}.${extension}`,
+          type: type,
+        });
+      }
+    }
+    // FDA Image
+    if (productData.fdaImage) {
+      const fileInfo = await FileSystem.getInfoAsync(productData.fdaImage);
+      if (fileInfo.exists) {
+        const { type, extension } = getFileInfo(productData.fdaImage);
+        formData.append('fda_image', {
+          uri: productData.fdaImage,
+          name: `fda_${Date.now()}.${extension}`,
+          type: type,
+        });
+      }
+    }
+    return formData;
+  };
+
+  const handleUpload = async () => {
+    if (isUploading) return;
+    // Validate all required fields
+    if (!productData.name || !productData.type || !productData.subtype || !productData.price) {
+      Alert.alert('Error', 'Please fill in all required fields.');
+      return;
+    }
+    if (!productData.productImage || !productData.fdaImage) {
+      Alert.alert('Error', 'Both product and FDA images are required.');
+      return;
+    }
+    try {
+      setIsUploading(true);
+      const formData = await prepareFormData();
+      const url = `${API_URL}/api/products/store`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // Timeout in 60s
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error: ${res.status} - ${errorText.substring(0, 100)}`);
+      }
+      setShowSuccessPopup(true);
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+        resetForm();
+        router.push('/(tabs)/home');
+      }, 2000);
+    } catch (error) {
+      Alert.alert('Upload Failed', error.message || 'Failed to upload product. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setProductData({
+      name: '',
+      type: 'Skincare',
+      subtype: '',
+      price: '',
+      description: '',
+      productImage: null,
+      fdaImage: null,
+    });
   };
 
   const SuccessPopup = () => (
@@ -99,13 +256,13 @@ export default function SellerUpload() {
       visible={showTypeDropdown}
       onRequestClose={() => setShowTypeDropdown(false)}
     >
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.dropdownOverlay}
         activeOpacity={1}
         onPress={() => setShowTypeDropdown(false)}
       >
         <View style={styles.dropdownList}>
-          {Object.keys(productTypes).map((type) => (
+          {Object.keys(productSubtypes).map((type) => (
             <TouchableOpacity
               key={type}
               style={styles.dropdownItem}
@@ -113,15 +270,17 @@ export default function SellerUpload() {
                 setProductData({
                   ...productData,
                   type,
-                  subtype: ''
+                  subtype: '',
                 });
                 setShowTypeDropdown(false);
               }}
             >
-              <Text style={[
-                styles.dropdownItemText,
-                productData.type === type && styles.dropdownItemTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.dropdownItemText,
+                  productData.type === type && styles.dropdownItemTextActive,
+                ]}
+              >
                 {type}
               </Text>
             </TouchableOpacity>
@@ -138,29 +297,31 @@ export default function SellerUpload() {
       visible={showSubtypeDropdown}
       onRequestClose={() => setShowSubtypeDropdown(false)}
     >
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.dropdownOverlay}
         activeOpacity={1}
         onPress={() => setShowSubtypeDropdown(false)}
       >
         <View style={styles.dropdownList}>
-          {productTypes[productData.type].map((subtype) => (
+          {productSubtypes[productData.type].map((subtype) => (
             <TouchableOpacity
-              key={subtype}
+              key={subtype.id}
               style={styles.dropdownItem}
               onPress={() => {
                 setProductData({
                   ...productData,
-                  subtype
+                  subtype: subtype.name,
                 });
                 setShowSubtypeDropdown(false);
               }}
             >
-              <Text style={[
-                styles.dropdownItemText,
-                productData.subtype === subtype && styles.dropdownItemTextActive
-              ]}>
-                {subtype}
+              <Text
+                style={[
+                  styles.dropdownItemText,
+                  productData.subtype === subtype.name && styles.dropdownItemTextActive,
+                ]}
+              >
+                {subtype.name}
               </Text>
             </TouchableOpacity>
           ))}
@@ -168,6 +329,33 @@ export default function SellerUpload() {
       </TouchableOpacity>
     </Modal>
   );
+
+  if (loading) {
+    return <ActivityIndicator style={{ flex: 1 }} size="large" color="#731C82" />;
+  }
+
+  if (!user || user.role?.toLowerCase() !== 'seller') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={handleClose}>
+              <Ionicons name="arrow-back" size={24} color="#731C82" />
+            </TouchableOpacity>
+            <Text style={styles.headerText}>Upload a Product</Text>
+          </View>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, color: '#731C82', marginBottom: 20 }}>
+            Only sellers can upload products.
+          </Text>
+          <TouchableOpacity style={styles.uploadButton} onPress={handleClose}>
+            <Text style={styles.uploadButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -179,23 +367,21 @@ export default function SellerUpload() {
           <Text style={styles.headerText}>Upload a Product</Text>
         </View>
       </View>
-
       <ScrollView style={styles.content}>
         <View style={styles.formContainer}>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Product Name</Text>
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="Enter product name"
               placeholderTextColor="#999"
               value={productData.name}
-              onChangeText={(text) => setProductData(prev => ({...prev, name: text}))}
+              onChangeText={(text) => setProductData((prev) => ({ ...prev, name: text }))}
             />
           </View>
-
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Product Type</Text>
-            <Pressable 
+            <Pressable
               style={styles.dropdownButton}
               onPress={() => setShowTypeDropdown(true)}
             >
@@ -203,10 +389,9 @@ export default function SellerUpload() {
               <Ionicons name="chevron-down" size={24} color="#999" />
             </Pressable>
           </View>
-
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Product Subtype</Text>
-            <Pressable 
+            <Pressable
               style={styles.dropdownButton}
               onPress={() => setShowSubtypeDropdown(true)}
             >
@@ -216,41 +401,39 @@ export default function SellerUpload() {
               <Ionicons name="chevron-down" size={24} color="#999" />
             </Pressable>
           </View>
-
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Price</Text>
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="Enter price"
               placeholderTextColor="#999"
               value={productData.price}
-              onChangeText={(text) => setProductData(prev => ({...prev, price: text}))}
+              onChangeText={(text) => setProductData((prev) => ({ ...prev, price: text }))}
               keyboardType="numeric"
             />
           </View>
-
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Description</Text>
-            <TextInput 
+            <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Enter product description"
               placeholderTextColor="#999"
               value={productData.description}
-              onChangeText={(text) => setProductData(prev => ({...prev, description: text}))}
+              onChangeText={(text) => setProductData((prev) => ({ ...prev, description: text }))}
               multiline
               numberOfLines={4}
             />
           </View>
-
           <View style={styles.imageSection}>
-            <TouchableOpacity 
+            <Text style={styles.inputLabel}>Product Image</Text>
+            <TouchableOpacity
               style={styles.imageUploadButton}
               onPress={() => pickImage('productImage')}
             >
               {productData.productImage ? (
-                <Image 
-                  source={{ uri: productData.productImage }} 
-                  style={styles.previewImage} 
+                <Image
+                  source={{ uri: productData.productImage }}
+                  style={styles.previewImage}
                 />
               ) : (
                 <>
@@ -259,19 +442,37 @@ export default function SellerUpload() {
                 </>
               )}
             </TouchableOpacity>
-
-        
           </View>
-
-          <TouchableOpacity 
-            style={styles.uploadButton}
+          <View style={styles.imageSection}>
+            <Text style={styles.inputLabel}>FDA Approved Image</Text>
+            <TouchableOpacity
+              style={styles.imageUploadButton}
+              onPress={() => pickImage('fdaImage')}
+            >
+              {productData.fdaImage ? (
+                <Image
+                  source={{ uri: productData.fdaImage }}
+                  style={styles.previewImage}
+                />
+              ) : (
+                <>
+                  <Ionicons name="document-outline" size={24} color="#999" />
+                  <Text style={styles.imageUploadText}>Add FDA Approved Image</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
             onPress={handleUpload}
+            disabled={isUploading}
           >
-            <Text style={styles.uploadButtonText}>UPLOAD</Text>
+            <Text style={styles.uploadButtonText}>
+              {isUploading ? 'UPLOADING...' : 'UPLOAD'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-
       {showSuccessPopup && <SuccessPopup />}
       <TypeDropdown />
       <SubtypeDropdown />
@@ -442,5 +643,8 @@ const styles = StyleSheet.create({
   dropdownItemTextActive: {
     color: '#731C82',
     fontWeight: 'bold',
+  },
+  uploadButtonDisabled: {
+    backgroundColor: '#CCCCCC',
   },
 });

@@ -62,7 +62,8 @@ export default function Sidebar({ isVisible, onClose }) {
             <MenuItem icon="user" label="Users" onPress={() => router.push('/(tabs)/admin/UserList')} />
             <MenuItem icon="users" label="Sellers" onPress={() => router.push('/(tabs)/admin/SellerList')} />
             <MenuItem icon="user-plus" label="Pending Sellers" onPress={() => router.push('/(tabs)/admin/PendingSellers ')} />
-            
+            <MenuItem icon="user-plus" label="Pending Products" onPress={() => router.push('/(tabs)/admin/PendingProducts')} />
+
             <DropdownMenuItem 
               icon={() => <MaterialCommunityIcons name="lotion" size={24} color="black" />} 
               label="Skincare Products"

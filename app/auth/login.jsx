@@ -46,9 +46,18 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
       
-      // 👇 Safe JSON parsing here
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
+      const contentType = response.headers.get('content-type');
+      let data = {};
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Not JSON, handle gracefully
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        Alert.alert('Error', 'Unexpected server response. Please try again later.');
+        setIsLoading(false);
+        return;
+      }
 
       console.log('Login response:', data); 
       

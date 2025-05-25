@@ -65,4 +65,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //admin skincare products
     Route::get('/admin/skincare-products', [ProductController::class, 'fetchAdminSkincareProducts']);
+
+    //display seller uploaded products 
+    Route::get('/sellers-with-pending-products', [ProductController::class, 'fetchSellersWithPendingProducts']);
+
+    //display admin uploaded products 
+    Route::post('/admin/products/store', [ProductController::class, 'storeAdmin']);
 });

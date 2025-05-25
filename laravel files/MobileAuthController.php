@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class MobileAuthController extends Controller
 {
-    public function login(Request $request)
+public function login(Request $request)
 {
     $validator = Validator::make($request->all(), [
         'email' => 'required|string|email',
@@ -22,27 +22,34 @@ class MobileAuthController extends Controller
         return response()->json(['errors' => $validator->errors()], 422);
     }
 
+    // Define $user BEFORE logging
     $user = User::where('email', $request->email)->first();
 
-    if (! $user || ! Hash::check($request->password, $user->password)) {
+    \Log::info('Login attempt', [
+        'email' => $request->email,
+        'found_user' => $user !== null,
+        'password_match' => $user ? \Hash::check($request->password, $user->password) : false,
+    ]);
+
+    if (! $user || ! \Hash::check($request->password, $user->password)) {
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
 
-    // Convert role to lowercase for comparison
     $normalizedRole = strtolower($user->role);
-    
     if (!in_array($normalizedRole, ['admin', 'user', 'seller'])) {
         return response()->json(['message' => 'Unauthorized role'], 403);
     }
 
-    $token = $user->createToken('mobile-token')->plainTextToken; // Create token once
+    $token = $user->createToken('mobile-token')->plainTextToken;
 
     return response()->json([
         'user' => $user,
-        'token' => $token, // Use the created token
+        'token' => $token,
         'role' => $normalizedRole,
     ]);
 }
+
+
 
     public function register(Request $request)
     {
@@ -60,15 +67,15 @@ class MobileAuthController extends Controller
         }
 
         try {
-            $user = User::create([
-                'name' => $request->name,
-                'username' => $request->username,
-                'email' => $request->email,
-                'address' => $request->address,
-                'password' => bcrypt($request->password),
-                'role' => strtolower($request->role), // Ensure lowercase
-                'seller_status' => $request->role === 'seller',
-            ]);
+$user = User::create([
+    'name' => $request->name,
+    'username' => $request->username,
+    'email' => $request->email,
+    'address' => $request->address,
+    'password' => $request->password,  // <-- pass raw password only
+    'role' => strtolower($request->role),
+    'seller_status' => $request->role === 'seller',
+]);
 
             Log::info('New user registered', ['user_id' => $user->id]);
 
@@ -140,9 +147,9 @@ class MobileAuthController extends Controller
         $user->address = $validated['address'] ?? null;
         $user->role = $validated['role'];
         $user->seller_status = $validated['role'] === 'seller';
-        if (!empty($validated['password'])) {
-            $user->password = bcrypt($validated['password']);
-        }
+       if (!empty($validated['password'])) {
+    $user->password = $validated['password'];  // Let mutator handle hashing
+}
         $user->save();
         return response()->json($user);
     }

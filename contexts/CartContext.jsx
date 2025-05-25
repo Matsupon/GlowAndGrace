@@ -78,8 +78,13 @@ export const CartProvider = ({ children }) => {
       const response = await api.get('/api/mobile/cart');
       console.log('Cart items response:', response.data);
       
-      // Filter out items that are already ordered
-      const pendingItems = response.data.filter(item => item.status === 'PendingOrder');
+      let cartArray = [];
+      if (Array.isArray(response.data)) {
+        cartArray = response.data;
+      } else if (Array.isArray(response.data.cart)) {
+        cartArray = response.data.cart;
+      }
+      const pendingItems = cartArray.filter(item => item.status === 'PendingOrder');
       setCartItems(pendingItems);
       setCartCount(pendingItems.length);
     } catch (error) {
