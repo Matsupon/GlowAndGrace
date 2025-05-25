@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Checkbox } from 'react-native-paper';
 import ProductCard from '../../../../../components/admin/products/ProductCard';
@@ -6,6 +6,7 @@ import AdminHeader from '../../../../../components/admin/AdminHeader';
 import ProductModal from '../../../../../components/admin/products/ProductModal';
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
+import { API_URL } from '@env';
 
 export default function MoisturizerPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
@@ -14,55 +15,23 @@ export default function MoisturizerPage() {
   const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const products = [
-    {
-      id: '1',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'A lightweight moisturizer with SPF50 PA++++ protection that provides a dewy finish while keeping your skin hydrated and protected from harmful UV rays.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product2.png'),
-      details: {
-        brand: 'BELO',
-        volume: '50ml',
-        benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight',
-          'Hydrating'
-        ],
-        ingredients: [
-          'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
-        ]
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/skincare-products`);
+        const data = await response.json();
+        setProducts(data.filter(p => p.subtype_id === 2));
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+      } finally {
+        setLoading(false);
       }
-    },
-    {
-      id: '2',
-      name: 'Celeteque Hydration Facial Moisturizer',
-      description: 'A gentle, non-greasy moisturizer that provides long-lasting hydration for all skin types. Perfect for daily use.',
-      price: 95.00,
-      image: require('../../../../../assets/images/product3.png'),
-      details: {
-        brand: 'Celeteque',
-        volume: '50ml',
-        benefits: [
-          'Hydrating',
-          'Non-greasy',
-          'Gentle formula',
-          'Suitable for all skin types'
-        ],
-        ingredients: [
-          'Water',
-          'Glycerin',
-          'Dimethicone',
-          'Allantoin'
-        ]
-      }
-    },
-  ];
+    };
+    fetchProducts();
+  }, []);
 
   const handleSelectProduct = (productId) => {
     const newSelected = new Set(selectedProducts);

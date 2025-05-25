@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Checkbox } from 'react-native-paper';
 import ProductCard from '../../../../../components/admin/products/ProductCard';
@@ -6,63 +6,32 @@ import AdminHeader from '../../../../../components/admin/AdminHeader';
 import ProductModal from '../../../../../components/admin/products/ProductModal';
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
+import { API_URL } from '@env';
 
-export default function CleanserPage() {
+export default function SunscreenPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const products = [
-    {
-      id: '1',
-      name: 'Cetaphil Gentle Skin Cleanser',
-      description: 'A mild, non-irritating cleanser that effectively removes dirt and makeup while maintaining the skin\'s natural moisture barrier.',
-      price: 85.00,
-      image: require('../../../../../assets/images/product6.png'),
-      details: {
-        brand: 'Cetaphil',
-        volume: '250ml',
-        benefits: [
-          'Gentle cleansing',
-          'Non-irritating',
-          'Maintains moisture barrier',
-          'Suitable for sensitive skin'
-        ],
-        ingredients: [
-          'Water',
-          'Cetyl Alcohol',
-          'Propylene Glycol',
-          'Sodium Lauryl Sulfate'
-        ]
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/skincare-products`);
+        const data = await response.json();
+        setProducts(data.filter(p => p.subtype_id === 3));
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+      } finally {
+        setLoading(false);
       }
-    },
-    {
-      id: '2',
-      name: 'Neutrogena Deep Clean Facial Cleanser',
-      description: 'A deep cleansing formula that removes dirt, oil, and makeup while preventing breakouts and leaving skin refreshed.',
-      price: 95.00,
-      image: require('../../../../../assets/images/product7.png'),
-      details: {
-        brand: 'Neutrogena',
-        volume: '200ml',
-        benefits: [
-          'Deep cleansing',
-          'Oil control',
-          'Prevents breakouts',
-          'Refreshing'
-        ],
-        ingredients: [
-          'Water',
-          'Sodium Laureth Sulfate',
-          'Cocamidopropyl Betaine',
-          'Salicylic Acid'
-        ]
-      }
-    },
-  ];
+    };
+    fetchProducts();
+  }, []);
 
   const handleSelectProduct = (productId) => {
     const newSelected = new Set(selectedProducts);
@@ -114,7 +83,7 @@ export default function CleanserPage() {
 
       <View style={styles.header}>
         <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Cleansers"</Text>
+        <Text style={styles.subtitle}>"Sunscreens"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>

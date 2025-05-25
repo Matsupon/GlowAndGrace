@@ -37,23 +37,24 @@ export default function Login() {
   
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('email', email);
-      formData.append('password', password);
-  
       const response = await fetch(`${API_URL}/api/mobile/login`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify({ email, password }),
       });
-  
-      const data = await response.json();
+      
+      // 👇 Safe JSON parsing here
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+
+      console.log('Login response:', data); 
+      
   
       if (response.ok) {
-        await AsyncStorage.setItem('userToken', data.token);
-        await AsyncStorage.setItem('userData', JSON.stringify(data.user));
+        await AsyncStorage.setItem('userToken', data.token); 
   
         if (data.user.role === 'admin') {
           router.replace('/(tabs)/admin/dashboard');

@@ -70,7 +70,7 @@ export default function Sidebar({ isVisible, onClose }) {
                 { label: 'Toners', route: '/(tabs)/admin/products/skincare/toners' },
                 { label: 'Moisturizer', route: '/(tabs)/admin/products/skincare/moisturizer' },
                 { label: 'Cream', route: '/(tabs)/admin/products/skincare/cream' },
-                { label: 'Cleanser', route: '/(tabs)/admin/products/skincare/cleanser' }
+                { label: 'Sunscreen', route: '/(tabs)/admin/products/skincare/sunscreen' }
               ]}
             />
             

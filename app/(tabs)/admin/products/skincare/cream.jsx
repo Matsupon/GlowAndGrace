@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Checkbox } from 'react-native-paper';
 import ProductCard from '../../../../../components/admin/products/ProductCard';
@@ -6,6 +6,7 @@ import AdminHeader from '../../../../../components/admin/AdminHeader';
 import ProductModal from '../../../../../components/admin/products/ProductModal';
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
+import { API_URL } from '@env';
 
 export default function CreamPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
@@ -14,55 +15,23 @@ export default function CreamPage() {
   const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const router = useRouter();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const products = [
-    {
-      id: '1',
-      name: 'Pond\'s Bright Beauty Spot-less Glow Cream',
-      description: 'A brightening cream that helps reduce dark spots and evens out skin tone while providing deep hydration.',
-      price: 120.00,
-      image: require('../../../../../assets/images/product4.png'),
-      details: {
-        brand: 'Pond\'s',
-        volume: '50g',
-        benefits: [
-          'Brightens skin',
-          'Reduces dark spots',
-          'Even skin tone',
-          'Deep hydration'
-        ],
-        ingredients: [
-          'Water',
-          'Glycerin',
-          'Niacinamide',
-          'Vitamin B3'
-        ]
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/skincare-products`);
+        const data = await response.json();
+        setProducts(data.filter(p => p.subtype_id === 1));
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+      } finally {
+        setLoading(false);
       }
-    },
-    {
-      id: '2',
-      name: 'Olay Regenerist Micro-Sculpting Cream',
-      description: 'An anti-aging cream that helps reduce fine lines and wrinkles while improving skin elasticity.',
-      price: 150.00,
-      image: require('../../../../../assets/images/product5.png'),
-      details: {
-        brand: 'Olay',
-        volume: '50g',
-        benefits: [
-          'Anti-aging',
-          'Reduces fine lines',
-          'Improves elasticity',
-          'Firming'
-        ],
-        ingredients: [
-          'Water',
-          'Glycerin',
-          'Niacinamide',
-          'Amino-Peptide Complex'
-        ]
-      }
-    },
-  ];
+    };
+    fetchProducts();
+  }, []);
 
   const handleSelectProduct = (productId) => {
     const newSelected = new Set(selectedProducts);

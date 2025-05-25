@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
 import { View, TextInput, Text, TouchableOpacity, StyleSheet, Image, SafeAreaView, Animated, Alert } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import { MaterialIcons } from '@expo/vector-icons';
-import { API_URL } from '@env';
+import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
 
 export default function Signup() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -48,50 +48,52 @@ export default function Signup() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-  
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
-  
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('name', fullName);
-      formData.append('username', username);
-      formData.append('email', email);
-      formData.append('address', address);
-      formData.append('password', password);
-      formData.append('password_confirmation', confirmPassword);
-      formData.append('role', 'user');
-  
       const response = await fetch(`${API_URL}/api/mobile/register`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
-        body: formData,
-        credentials: 'include',
+        body: JSON.stringify({
+          name: fullName,
+          username,
+          email,
+          address,
+          password,
+          password_confirmation: confirmPassword,
+          role: 'user',
+        }),
       });
-  
+    
+      const text = await response.text(); // ✅ parse as text first
+      const data = text ? JSON.parse(text) : {}; // ✅ only parse if not empty
+    
+      console.log('Signup response:', data); // 🪵 helpful for debugging
+    
       if (!response.ok) {
-        const errData = await response.json();
-        console.log('Validation errors:', errData);  // <-- This logs full error details to console
-        const errorMessage = errData.message || (errData.errors ? Object.values(errData.errors).flat().join('\n') : 'Registration failed');
+        const errorMessage =
+          data.message ||
+          (data.errors ? Object.values(data.errors).flat().join('\n') : 'Registration failed');
         Alert.alert('Error', errorMessage);
-        throw errData; // This line will be caught below if you want
+        throw data;
       }
-  
-      const data = await response.json();
+    
       if (data.token) {
         await AsyncStorage.setItem('userToken', data.token);
       }
       if (data.user) {
         await AsyncStorage.setItem('userData', JSON.stringify(data.user));
       }
+    
       Alert.alert('Success', 'Registration successful!');
       router.replace('/(tabs)/home');
-  
+    
     } catch (error) {
       console.error('Signup error:', error);
       if (!error.message) {
@@ -101,8 +103,7 @@ export default function Signup() {
       setIsLoading(false);
     }
   };
-  
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <Image source={require('../../assets/images/splashscreenBg.png')} style={styles.backgroundImage} />
@@ -286,7 +287,6 @@ export default function Signup() {
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {

@@ -6,6 +6,7 @@ return [
     'admin/*',
     'web/*',
     'build/*', 
+    'build/assets/*',
     'mainpage/*',
     'storage/*',
     'products/*',
@@ -22,7 +23,7 @@ return [
 ],
     'allowed_methods' => ['*'],
 
- 'allowed_origins' => ['*'],
+ 'allowed_origins' => ['http://localhost:8081', 'http://192.168.10.40:8000'],
  
     'allowed_origins_patterns' => [],
 
@@ -32,5 +33,5 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' =>  false,
+    'supports_credentials' =>  true,
 ];

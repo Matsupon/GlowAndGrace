@@ -72,10 +72,17 @@ export default function Profile() {
   };
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem('userToken');
-    await AsyncStorage.removeItem('userData');
-    router.replace('/auth/login');
+    try { 
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userData');
+   
+      router.replace('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      Alert.alert('Error', 'Something went wrong while logging out.');
+    }
   };
+  
 
   const EditProfileModal = () => (
     <Modal
