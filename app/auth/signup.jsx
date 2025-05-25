@@ -4,6 +4,7 @@ import { Link, useRouter } from 'expo-router';
 import { useFonts, Katibeh_400Regular } from '@expo-google-fonts/katibeh';
 import { MaterialIcons } from '@expo/vector-icons';
 import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Signup() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -82,6 +83,12 @@ export default function Signup() {
       }
   
       const data = await response.json();
+      if (data.token) {
+        await AsyncStorage.setItem('userToken', data.token);
+      }
+      if (data.user) {
+        await AsyncStorage.setItem('userData', JSON.stringify(data.user));
+      }
       Alert.alert('Success', 'Registration successful!');
       router.replace('/(tabs)/home');
   

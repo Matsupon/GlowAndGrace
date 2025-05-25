@@ -52,12 +52,14 @@ export default function Login() {
       const data = await response.json();
   
       if (response.ok) {
-        // Save the actual token (optional but recommended)
         await AsyncStorage.setItem('userToken', data.token);
         await AsyncStorage.setItem('userData', JSON.stringify(data.user));
   
-        // ✅ Go directly to your app's home screen
-        router.replace('/(tabs)/home');
+        if (data.user.role === 'admin') {
+          router.replace('/(tabs)/admin/dashboard');
+        } else {
+          router.replace('/(tabs)/home');
+        }
       } else {
         Alert.alert('Login Failed', data.message || 'Invalid credentials');
       }
@@ -140,14 +142,6 @@ export default function Login() {
             <Link href="/auth/signup" asChild>
               <TouchableOpacity>
                 <Text style={styles.signupLink}>Sign Up</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-
-          <View style={styles.adminLinkContainer}>
-            <Link href="/(tabs)/admin/dashboard" asChild>
-              <TouchableOpacity>
-                <Text style={styles.adminLink}>Admin Dashboard</Text>
               </TouchableOpacity>
             </Link>
           </View>

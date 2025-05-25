@@ -2,9 +2,57 @@ import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
 
-const PendingSellerModal = ({ visible, onClose, seller }) => {
+const PendingSellerModal = ({ visible, onClose, seller, onSellerApproved }) => {
   if (!seller) return null;
+
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
+  const [showApproveSuccess, setShowApproveSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleApproveSeller = async () => {
+    setLoading(true);
+    try {
+      if (!seller?.id) {
+        throw new Error('Invalid seller data');
+      }
+
+      const token = await AsyncStorage.getItem('userToken');
+
+      console.log('Seller object:', seller);
+    console.log('Attempting to approve user ID:', seller.id);
+      
+      // Add /api/ to match Laravel route structure
+      const res = await fetch(`${API_URL}/api/users/${seller.id}/approve-seller`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+  
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to approve seller');
+      }
+
+     setShowApproveConfirm(false);
+      setShowApproveSuccess(true);
+      
+      setTimeout(() => {
+        setShowApproveSuccess(false);
+        setLoading(false);
+        onSellerApproved?.(seller.id);
+        onClose();
+      }, 2000);
+    } catch (e) {
+      setLoading(false);
+      alert(e.message || 'Failed to approve seller');
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide">
@@ -15,9 +63,6 @@ const PendingSellerModal = ({ visible, onClose, seller }) => {
         </TouchableOpacity>
         <ScrollView s tyle={styles.scrollView}>
           <View style={styles.contentContainer}>
-            <Text style={styles.label}>Email: <Text style={styles.value}>{seller.email}</Text></Text>
-            <Text style={styles.label}>Status: <Text style={styles.value}>{seller.status}</Text></Text>
-            <Text style={[styles.label, {marginTop: 20}]}>Uploaded Products:</Text>
             {seller.products && seller.products.length > 0 ? (
               seller.products.map(product => (
                 <View key={product.id} style={styles.productCard}>
@@ -48,7 +93,51 @@ const PendingSellerModal = ({ visible, onClose, seller }) => {
             )}
           </View>
         </ScrollView>
+        <TouchableOpacity
+          style={styles.acceptButton}
+          onPress={() => setShowApproveConfirm(true)}
+          disabled={loading}
+        >
+          <Text style={styles.acceptButtonText}>Approve Seller</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Confirmation Modal */}
+      <Modal transparent visible={showApproveConfirm} animationType="fade">
+        <View style={styles.confirmModalContainer}>
+          <View style={styles.confirmModalContent}>
+            <Text style={styles.confirmText}>Are you sure you want to accept this user to become a Seller?</Text>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.yesButton]}
+                onPress={handleApproveSeller}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>YES</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.noButton]}
+                onPress={() => setShowApproveConfirm(false)}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>NO</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal transparent visible={showApproveSuccess} animationType="fade">
+        <View style={styles.confirmModalContainer}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark" size={48} color="white" />
+            </View>
+            <Text style={styles.successMessage}>This User is now successfully a Seller!</Text>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 };
@@ -133,7 +222,10 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 5,
+    marginBottom: 20, // 👈 adds space below the button
+    width: '60%',
+    alignSelf: 'center',
   },
   acceptButtonText: {
     color: 'white',

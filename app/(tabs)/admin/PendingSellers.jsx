@@ -12,7 +12,7 @@ const DeleteConfirmationModal = ({ visible, onClose, onConfirm }) => (
   <Modal transparent visible={visible} animationType="fade">
     <View style={styles.modalOverlay}>
       <View style={styles.confirmationModal}>
-        <Text style={styles.confirmationText}>Are you sure you want to reject/delete this product?</Text>
+        <Text style={styles.confirmationText}>Are you sure you want to reject/delete this user?</Text>
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={[styles.button, styles.yesButton]} onPress={onConfirm}>
             <Text style={styles.buttonText}>YES</Text>
@@ -33,7 +33,7 @@ const SuccessModal = ({ visible }) => (
         <View style={styles.checkmarkContainer}>
           <Ionicons name="checkmark" size={40} color="white" />
         </View>
-        <Text style={styles.successText}>Product deleted successfully!</Text>
+        <Text style={styles.successText}>Seller deleted successfully!</Text>
       </View>
     </View>
   </Modal>
@@ -44,12 +44,11 @@ const PendingSellers = () => {
   const [pendingSellers, setPendingSellers] = useState([]);
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedSeller, setSelectedSeller] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [productToDelete, setProductToDelete] = useState(null);
+  const [sellerToDelete, setSellerToDelete] = useState(null);
   const [fetchError, setFetchError] = useState(null);
-
 
   useEffect(() => {
     const getToken = async () => {
@@ -63,13 +62,12 @@ const PendingSellers = () => {
     getToken();
   }, []);
 
-  // Fetch pending sellers from backend
   useFocusEffect(
     React.useCallback(() => {
       const fetchPendingSellers = async () => {
         try {
           const token = await AsyncStorage.getItem('userToken');
-          const res = await fetch(`${API_URL}/pending-sellers-with-products`, {
+          const res = await fetch(`${API_URL}/api/pending-sellers-with-products`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -93,56 +91,50 @@ const PendingSellers = () => {
 
   const toggleSidebar = () => setSidebarVisible(!isSidebarVisible);
 
-  const handleViewDetails = (product) => {
-    setSelectedProduct(product);
+  const handleViewDetails = (seller) => {
+    setSelectedSeller(seller);
     setModalVisible(true);
   };
 
-  const handleDeletePress = (product) => {
-    setProductToDelete(product);
+  const handleDeletePress = (seller) => {
+    setSellerToDelete(seller);
     setShowDeleteConfirmation(true);
   };
 
   const handleDeleteConfirm = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
-      if (productToDelete) {
-        await fetch(`${API_URL}/api/products/${productToDelete.id}`, { 
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+      if (!sellerToDelete?.id) {
+        throw new Error('Invalid seller data');
       }
-      setPendingSellers(prev => prev.filter(p => p.id !== productToDelete.id));
-      setShowDeleteConfirmation(false);
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 2000);
-    } catch (error) {
-      console.error('Delete error:', error);
-    }
-  };
-
-  const handleAcceptProduct = async () => {
-    try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (selectedProduct) {
-        await fetch(`${API_URL}/api/products/${selectedProduct.id}/approve`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        setPendingSellers(prev => prev.filter(p => p.id !== selectedProduct.id));
+  
+      const res = await fetch(`${API_URL}/api/users/${sellerToDelete.id}/reject-seller`, { 
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+  
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.message || 'Rejection failed');
       }
-      setModalVisible(false);
-      setSelectedProduct(null);
-    } catch (error) {
-      console.error('Approval error:', error);
-    }
-  };
+  
+      // Update state after successful rejection
+      setPendingSellers(prev => prev.filter(p => p.id !== sellerToDelete.id));
+    
+    setShowDeleteConfirmation(false);
+    setShowSuccessMessage(true);
+    setTimeout(() => setShowSuccessMessage(false), 2000);
+  } catch (error) {
+    console.error('Update error:', error);
+    alert(error.message || 'Failed to update seller status');
+  } finally {
+    setSellerToDelete(null);
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -162,27 +154,28 @@ const PendingSellers = () => {
           )}
           renderItem={({ item: seller }) => (
             <View style={styles.sellerCard}>
-              <Text style={styles.sellerName}>{seller.name} ({seller.email})</Text>
-              <Text style={styles.sellerStatus}>Status: {seller.status}</Text>
-              {seller.products.length === 0 ? (
-                <Text style={{ color: '#888', marginLeft: 10 }}>No products uploaded.</Text>
-              ) : (
-                seller.products.map(product => (
-                  <View key={product.id} style={styles.productCard}>
-                    {product.image_url && (
-                      <Image source={{ uri: product.image_url }} style={styles.productImage} />
-                    )}
-                    <View style={styles.productInfo}>
-                      <Text style={styles.productName}>{product.name}</Text>
-                      <Text style={styles.price}>₱{product.price}</Text>
-                      <Text style={styles.description}>{product.description}</Text>
-                      {product.fda_image_url && (
-                        <Image source={{ uri: product.fda_image_url }} style={styles.fdaImage} />
-                      )}
-                    </View>
-                  </View>
-                ))
-              )}
+              <View style={styles.sellerRow}>
+                <Text style={styles.sellerInfoText}>
+                  <Text style={styles.sellerId}>{seller.id}</Text>
+                  {'  '}
+                  <Text style={styles.sellerName}>{seller.name}</Text>
+                </Text>
+                
+                <View style={styles.actionsContainer}>
+                  <TouchableOpacity 
+                    onPress={() => handleViewDetails(seller)}
+                  >
+                    <Text style={styles.viewDetailsText}>View Details</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.deleteButton} 
+                    onPress={() => handleDeletePress(seller)}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#FF5252" />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           )}
         />
@@ -191,7 +184,7 @@ const PendingSellers = () => {
       <PendingSellerModal
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
-        seller={selectedProduct}
+        seller={selectedSeller}
       />
 
       <DeleteConfirmationModal
@@ -223,58 +216,52 @@ const styles = StyleSheet.create({
   },
   sellerCard: {
     backgroundColor: '#F3EAF7',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 8,
   },
-  sellerName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#731C82',
+  sellerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  sellerStatus: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 10,
-  },
-  productCard: {
+  sellerInfoText: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 10,
-    marginBottom: 5,
-    elevation: 1,
   },
-  productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+  sellerId: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#731C82',
+  },
+  sellerName: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 4,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  viewDetailsText: {
+    color: '#731C82',
+    textDecorationLine: 'underline',
+    fontSize: 14,
+  },
+  deleteButton: {
+    marginLeft: 8,
+  },
+  viewButton: {
+    backgroundColor: '#731C82',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 5,
     marginRight: 10,
   },
-  productInfo: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  price: {
+  viewButtonText: {
+    color: 'white',
     fontSize: 14,
-    color: '#731C82',
-    fontWeight: '500',
-  },
-  description: {
-    fontSize: 13,
-    color: '#666',
-  },
-  fdaImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 5,
-    marginTop: 5,
   },
   modalOverlay: {
     flex: 1,
