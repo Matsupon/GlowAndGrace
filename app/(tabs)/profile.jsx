@@ -18,6 +18,7 @@ import BottomNav from '../../components/layout/BottomNav';
 import ProductUploadModal from '../../components/modals/ProductUploadModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@env';
+import axios from 'axios';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -48,17 +49,22 @@ export default function Profile() {
   useEffect(() => {
     const fetchUserFromStorage = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem('userData');
         const storedToken = await AsyncStorage.getItem('userToken');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
         if (storedToken) {
           setUserToken(storedToken);
+          // Fetch user info from API
+          const response = await axios.get(`${API_URL}/api/mobile/user`, {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+          setUser(response.data);
+          await AsyncStorage.setItem('userData', JSON.stringify(response.data));
+        } else {
+          setUser(null);
         }
       } catch (error) {
         console.error('Error loading user:', error);
         Alert.alert('Error', 'Failed to load user information');
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -250,13 +256,16 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.linkItem}
-            onPress={() => setIsUploadModalVisible(true)}
-          >
-            <Text style={styles.linkText}>Become a Seller</Text>
-            <Ionicons name="chevron-forward" size={24} color="#666" />
-          </TouchableOpacity>
+          {/* Only show Become a Seller if user is NOT a Seller */}
+          {user?.role?.toLowerCase() !== 'seller' && (
+            <TouchableOpacity
+              style={styles.linkItem}
+              onPress={() => setIsUploadModalVisible(true)}
+            >
+              <Text style={styles.linkText}>Become a Seller</Text>
+              <Ionicons name="chevron-forward" size={24} color="#666" />
+            </TouchableOpacity>
+          )}
 
           {/* Only show My Products if user is a Seller */}
           {user?.role?.toLowerCase() === 'seller' && (

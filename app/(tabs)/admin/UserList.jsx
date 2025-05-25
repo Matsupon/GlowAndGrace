@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Alert, ActivityIndicator, Platform, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Sidebar from '../../../components/admin/Sidebar';
 import AdminHeader from '../../../components/admin/AdminHeader';
@@ -17,13 +17,19 @@ const UserList = () => {
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [deletingUserId, setDeletingUserId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [userIdToDelete, setUserIdToDelete] = useState(null);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('adminToken');
       const response = await axios.get(`${API_URL}/api/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        }
       });
       setUsers(response.data);
     } catch (error) {
@@ -37,30 +43,39 @@ const UserList = () => {
     fetchUsers();
   }, []);
 
-  const handleDelete = async (id) => {
-    Alert.alert('Delete User', 'Are you sure you want to delete this user?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          try {
-            setDeletingUserId(id);
-            const token = await AsyncStorage.getItem('adminToken');
-            await axios.delete(`${API_URL}/api/admin/users/${id}`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            setSuccessMessage('User deleted successfully!');
-            setUsers((prev) => prev.filter((user) => user.id !== id));
-            setTimeout(() => {
-              setSuccessMessage('');
-              setDeletingUserId(null);
-            }, 2000);
-          } catch (error) {
-            setDeletingUserId(null);
-            Alert.alert('Error', 'Failed to delete user');
-          }
+  const handleDelete = (id) => {
+    setUserIdToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteModal(false);
+    try {
+      setDeletingUserId(userIdToDelete);
+      const token = await AsyncStorage.getItem('adminToken');
+      const response = await axios.delete(`${API_URL}/api/admin/users/${userIdToDelete}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
         }
+      });
+
+      if (response.data && response.data.message === 'User deleted successfully.') {
+        setUsers((prev) => prev.filter((user) => user.id !== userIdToDelete));
+        setShowSuccessModal(true);
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setDeletingUserId(null);
+          setUserIdToDelete(null);
+        }, 2000);
+      } else {
+        throw new Error('Unexpected response');
       }
-    ]);
+    } catch (error) {
+      setDeletingUserId(null);
+      setUserIdToDelete(null);
+      Alert.alert('Error', 'Failed to delete user');
+    }
   };
 
   const toggleSidebar = () => {
@@ -75,12 +90,45 @@ const UserList = () => {
       case 'seller':
         return { label: 'SELLER', color: '#ff4081' };
       case 'pendingseller':
-        return { label: 'PENDINGSELLER', color: '#ff9800' }; // Orange for PendingSeller
+        return { label: 'PENDINGSELLER', color: '#ff9800' };
       case 'user':
       default:
         return { label: 'CUSTOMER', color: '#4caf50' };
     }
   };
+
+  // Confirmation Modal
+  const DeleteConfirmationModal = ({ visible, onConfirm, onCancel }) => (
+    <Modal transparent visible={visible} animationType="fade">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalBox}>
+          <Text style={styles.modalText}>Are you sure you want to delete this User?</Text>
+          <View style={styles.modalButtonRow}>
+            <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#64CE73' }]} onPress={onConfirm}>
+              <Text style={styles.modalButtonText}>YES</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#FF6D6F' }]} onPress={onCancel}>
+              <Text style={styles.modalButtonText}>NO</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Success Modal
+  const SuccessModal = ({ visible }) => (
+    <Modal transparent visible={visible} animationType="fade">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalBox}>
+          <View style={styles.successIconContainer}>
+            <Ionicons name="checkmark" size={48} color="white" />
+          </View>
+          <Text style={styles.successText}>User deleted successfully</Text>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -126,8 +174,67 @@ const UserList = () => {
       </View>
       {selectedUser && <UserModal visible={true} onClose={() => setSelectedUser(null)} user={selectedUser} onUserUpdated={fetchUsers} />}
       <AddUserModal visible={isAddUserModalVisible} onClose={() => setAddUserModalVisible(false)} onUserAdded={fetchUsers} />
+      <DeleteConfirmationModal
+        visible={showDeleteModal}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
+      <SuccessModal visible={showSuccessModal} />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBox: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 30,
+    alignItems: 'center',
+    width: 300,
+  },
+  modalText: {
+    fontSize: 17,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 20,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  successIconContainer: {
+    backgroundColor: '#64CE73',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  successText: {
+    fontSize: 17,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+});
 
 export default UserList;
