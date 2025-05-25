@@ -3,118 +3,52 @@ import { View, Text, Image, TouchableOpacity, Modal, StyleSheet, ScrollView } fr
 import { Ionicons } from '@expo/vector-icons';
 import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
 
-const PendingSellerModal = ({ visible, onClose, seller, onAccept }) => {
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-
+const PendingSellerModal = ({ visible, onClose, seller }) => {
   if (!seller) return null;
-
-  const handleAccept = () => {
-    setShowConfirmModal(true);
-  };
-
-  const confirmAccept = () => {
-    setShowConfirmModal(false);
-    setShowSuccessModal(true);
-    
-    // After 2 seconds, close everything and notify parent
-    setTimeout(() => {
-      setShowSuccessModal(false);
-      onAccept();
-    }, 2000);
-  };
 
   return (
     <Modal visible={visible} animationType="slide">
       <View style={styles.container}>
         <TouchableOpacity onPress={onClose} style={styles.header}>
           <Ionicons name="arrow-back" size={24} color="#800080" />
-          <Text style={styles.headerText}>{seller.seller_name || seller.customer_name || seller.user_name || seller.name}</Text>
+          <Text style={styles.headerText}>{seller.name}</Text>
         </TouchableOpacity>
-
-        <ScrollView style={styles.scrollView}>
+        <ScrollView s tyle={styles.scrollView}>
           <View style={styles.contentContainer}>
-            {seller.image_url && (
-              <Image
-                source={{ uri: normalizeImageUrl(seller.image_url) }}
-                style={styles.productImage}
-                resizeMode="contain"
-              />
+            <Text style={styles.label}>Email: <Text style={styles.value}>{seller.email}</Text></Text>
+            <Text style={styles.label}>Status: <Text style={styles.value}>{seller.status}</Text></Text>
+            <Text style={[styles.label, {marginTop: 20}]}>Uploaded Products:</Text>
+            {seller.products && seller.products.length > 0 ? (
+              seller.products.map(product => (
+                <View key={product.id} style={styles.productCard}>
+                  {product.image_url && (
+                    <Image
+                      source={{ uri: product.image_url }}
+                      style={styles.productImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                  <Text style={styles.productName}>{product.name}</Text>
+                  <Text style={styles.price}>₱{product.price}</Text>
+                  <Text style={styles.description}>{product.description}</Text>
+                  {product.fda_image_url && (
+                    <View style={{marginTop: 10}}>
+                      <Text style={styles.fdaLabel}>FDA Uploaded Image:</Text>
+                      <Image
+                        source={{ uri: product.fda_image_url }}
+                        style={styles.fdaImage}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={{marginTop: 10}}>No products uploaded.</Text>
             )}
-
-            <Text style={styles.productName}>{seller.name}</Text>
-            {seller.type && seller.subtype && (
-              <Text style={styles.productType}>{seller.type} - {seller.subtype}</Text>
-            )}
-
-            <View style={styles.infoContainer}>
-              <Text style={styles.label}>Price:</Text>
-              <Text style={styles.price}>₱{seller.price}</Text>
-
-              <Text style={styles.label}>Description:</Text>
-              <Text style={styles.description}>{seller.description}</Text>
-            </View>
-
-            <Text style={styles.fdaLabel}>FDA Uploaded Image:</Text>
-            {seller.fda_image_url && (
-              <Image
-                source={{ uri: normalizeFdaImageUrl(seller.fda_image_url) }}
-                style={styles.fdaImage}
-                resizeMode="contain"
-              />
-            )}
-
-            <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
-              <Text style={styles.acceptButtonText}>Accept Seller</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
-
-      {/* Confirmation Modal */}
-      <Modal
-        visible={showConfirmModal}
-        transparent={true}
-        animationType="fade"
-      >
-        <View style={styles.confirmModalContainer}>
-          <View style={styles.confirmModalContent}>
-            <Text style={styles.confirmText}>
-              Are you sure you want to accept this user to become a Seller?
-            </Text>
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.noButton]} 
-                onPress={() => setShowConfirmModal(false)}
-              >
-                <Text style={styles.buttonText}>NO</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.yesButton]} 
-                onPress={confirmAccept}
-              >
-                <Text style={styles.buttonText}>YES</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Success Modal */}
-      <Modal
-        visible={showSuccessModal}
-        transparent={true}
-        animationType="fade"
-      >
-        <View style={styles.confirmModalContainer}>
-          <View style={styles.successModalContent}>
-            <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark" size={40} color="white" />
-            </View>
-            <Text style={styles.successMessage}>This User is now a Seller</Text>
-          </View>
-        </View>
-      </Modal>
     </Modal>
   );
 };
@@ -267,6 +201,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 20,
+  },
+  productCard: {
+    backgroundColor: '#F7F8F9',
+    padding: 15,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  value: {
+    fontWeight: 'normal',
   },
 });
 

@@ -71,73 +71,65 @@ public function storeMobile(Request $request)
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
-    {
-        try {
-            // Validate incoming data
-            $validated = $request->validate([
-                'ProductName' => 'required|string',
-                'Description' => 'nullable|string',
-                'Price' => 'required|numeric',
-                'TypeID' => 'required|integer',
-                'SubTypeID' => 'required|integer',
-                'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
-                'fda_image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+{
+    try {
+        \Log::info('Product upload request received:', $request->all());
+        
+        $validated = $request->validate([
+            'ProductName' => 'required|string|max:255',
+            'Description' => 'nullable|string',
+            'Price' => 'required|numeric|min:0',
+            'TypeID' => 'required|integer|exists:producttypes,TypeID',
+            'SubTypeID' => 'required|integer|exists:productsubtypes,SubTypeID',
+            'image' => 'required|image|mimes:jpg,jpeg,png|max:5120', // 5MB max
+            'fda_image' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+        ]);
+
+        // Store images
+        $imagePath = $request->file('image')->store('products', 'public');
+        $fdaImagePath = $request->file('fda_image')->store('fda_approvals', 'public');
+
+        $product = Product::create([
+            'name' => $validated['ProductName'],
+            'description' => $validated['Description'] ?? null,
+            'price' => $validated['Price'],
+            'type_id' => $validated['TypeID'],
+            'subtype_id' => $validated['SubTypeID'],
+            'image' => $imagePath,
+            'fda_image' => $fdaImagePath,
+            'user_id' => auth()->id(),
+            'is_fda_approved' => false, // New products need approval
+        ]);
+
+        // Update user role if needed
+        $user = auth()->user();
+        if ($user->role === 'user') {
+            $user->update([
+                'role' => 'PendingSeller',
+                'seller_status' => true
             ]);
-
-            $isAdminCreated = (Auth::user()->role === 'admin') ? 1 : 0;
-
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                 $imagePath = $request->file('image')->store('public/products');
-            }
-
-            $fdaImagePath = null;
-            if ($request->hasFile('fda_image')) {
-                $fdaImagePath = $request->file('fda_image')->store('public/fda_image');
-            }
-
-            $product = Product::create([
-                'name' => $validated['ProductName'],
-                'description' => $validated['Description'] ?? null,
-                'price' => $validated['Price'],
-                'type_id' => $validated['TypeID'],
-                'subtype_id' => $validated['SubTypeID'],
-                'type_id' => $validated['TypeID'],
-                'image' => $imagePath,
-                'fda_image' => $fdaImagePath,
-                'user_id' => Auth::id(),
-                'is_admin_created' => $isAdminCreated,
-                'is_fda_approved' => $isAdminCreated,
-            ]);
-
-
-            $user = Auth::user();
-            if ($user->role === 'user') {
-                $user->role = 'PendingSeller';
-                $user->seller_status = true;
-                $user->save();
-            }
-
-            return response()->json([
-                'message' => 'Product created successfully!',
-                'product' => $product
-            ], 201);
-
-            return response()->json(['message' => 'Product created successfully!'], 201);
-        } catch (\Exception $e) {
-            \Log::error('Product creation failed:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
-            ]);
-            
-            return response()->json([
-                'error' => 'Product creation failed',
-                'message' => $e->getMessage()
-            ], 500);
         }
-    }
 
+        \Log::info('Product created successfully:', $product->toArray());
+        
+        return response()->json([
+            'message' => 'Product uploaded successfully!',
+            'product' => $product
+        ], 201);
+
+    } catch (\Exception $e) {
+        \Log::error('Product upload failed:', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'request' => $request->all()
+        ]);
+        
+        return response()->json([
+            'error' => 'Product upload failed',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}   
 
     public function destroy($id)
     {
@@ -631,42 +623,8 @@ public function getSellerProducts()
         }
     }
 
-    /**
-     * Fetch all users with status 'PendingSeller' and their uploaded products.
-     * Returns: [
-     *   {
-     *     id, name, email, status, products: [ { id, name, price, description, image_url, fda_image_url } ]
-     *   }, ...
-     * ]
-     */
-    public function fetchPendingSellersWithProducts()
-    {
-        $pendingSellers = \App\Models\User::where('role', 'PendingSeller')
-            ->with(['products' => function ($query) {
-                $query->select('id', 'user_id', 'name', 'price', 'description', 'image', 'fda_image');
-            }])
-            ->get();
 
-        $result = $pendingSellers->map(function ($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'status' => $user->role,
-                'products' => $user->products->map(function ($product) {
-                    return [
-                        'id' => $product->id,
-                        'name' => $product->name,
-                        'price' => $product->price,
-                        'description' => $product->description,
-                        'image_url' => $product->image ? asset('storage/' . $product->image) : null,
-                        'fda_image_url' => $product->fda_image ? asset('storage/' . $product->fda_image) : null,
-                    ];
-                }),
-            ];
-        });
 
-        return response()->json($result);
-    }
+
 
 }

@@ -1,25 +1,28 @@
 <?php
 // config/cors.php
 return [
-    'paths' => [
-        'api/*',  // This will cover all API routes
-        'admin/*', 
-        'web/*', 
-        'mainpage/*',
-        'storage/*',
-        'products/*',
-        'login', 
-        'logout', 
-        'register', 
-        'user', 
-        'sanctum/csrf-cookie', 
-        'products',
-        'fetch' 
-    ],
-
+'paths' => [
+    'api/*',
+    'admin/*',
+    'web/*',
+    'build/*', 
+    'mainpage/*',
+    'storage/*',
+    'products/*',
+    'login',
+    'logout',
+    'register',
+    'user',
+    'sanctum/csrf-cookie',
+    'products',
+    'fetch', 
+    '/api/seller/products',
+    '*',
+    'api/mobile/login',
+],
     'allowed_methods' => ['*'],
 
- 'allowed_origins' => ['http://localhost:8081', 'http://192.168.10.40:8000'],
+ 'allowed_origins' => ['*'],
  
     'allowed_origins_patterns' => [],
 
@@ -29,5 +32,5 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    'supports_credentials' =>  false,
 ];

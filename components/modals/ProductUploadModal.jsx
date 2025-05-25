@@ -10,11 +10,14 @@ import {
   ScrollView,
   Alert,
   Image,
+  Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // fix import for Ionicons
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { API_URL } from '@env';
+import * as FileSystem from 'expo-file-system';
+
 
 const productSubtypes = {
   Skincare: [
@@ -43,7 +46,6 @@ const typeMap = {
   Makeup: 3,
 };
 
-// Create subtypeMap for easy lookup of subtype IDs
 const subtypeMap = {};
 for (const [type, subtypes] of Object.entries(productSubtypes)) {
   subtypeMap[type] = {};
@@ -66,19 +68,28 @@ const ProductUploadModal = ({ visible, onClose, userId, userName, userToken }) =
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showSubtypeDropdown, setShowSubtypeDropdown] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const router = useRouter();
 
   useEffect(() => {
-    (async () => {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Needed',
-          'Sorry, we need camera roll permissions to upload images!'
-        );
-      }
-    })();
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Unsupported Platform',
+        'Product upload is only available on mobile devices',
+        [{ text: 'OK', onPress: onClose }]
+      );
+    } else {
+      (async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permission Needed',
+            'Sorry, we need camera roll permissions to upload images!'
+          );
+        }
+      })();
+    }
   }, []);
 
   const TypeDropdown = () => (
@@ -164,120 +175,179 @@ const ProductUploadModal = ({ visible, onClose, userId, userName, userToken }) =
 
   const pickImage = async (type) => {
     try {
-      let result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 0.8,
       });
-
-      if (!result.canceled) {
-        setProductData((prev) => ({
+  
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setProductData(prev => ({
           ...prev,
           [type]: result.assets[0].uri,
         }));
       }
     } catch (error) {
+      console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick image');
     }
   };
 
-  const getFileName = (uri) => uri.split('/').pop();
-
-  const mimeTypeMap = {
+  // Helper: Detect image MIME type and extension
+const getFileInfo = (uri) => {
+  const extension = uri.split('.').pop().toLowerCase();
+  const mimeTypes = {
     jpg: 'image/jpeg',
     jpeg: 'image/jpeg',
     png: 'image/png',
     gif: 'image/gif',
-    bmp: 'image/bmp',
-    webp: 'image/webp',
   };
+  return {
+    type: mimeTypes[extension] || 'image/jpeg',
+    extension: extension || 'jpg'
+  };
+};
 
-  const getMimeType = (uri) => {
-    const match = /\.(\w+)$/.exec(uri);
-    const ext = match ? match[1].toLowerCase() : 'jpg';
-    return mimeTypeMap[ext] || 'application/octet-stream';
+  const prepareFormData = async () => {
+    const formData = new FormData();
+    
+    formData.append('ProductName', productData.name);
+    formData.append('Description', productData.description);
+    formData.append('Price', productData.price);
+    formData.append('TypeID', typeMap[productData.type]);
+    formData.append('SubTypeID', subtypeMap[productData.type][productData.subtype]);
+
+    // Product Image
+    if (productData.productImage) {
+      const fileInfo = await FileSystem.getInfoAsync(productData.productImage);
+      if (fileInfo.exists) {
+        const { type, extension } = getFileInfo(productData.productImage);
+        formData.append('image', {
+          uri: productData.productImage,
+          name: `product_${Date.now()}.${extension}`,
+          type: type,
+        });
+      }
+    }
+
+    // Handle FDA image
+    if (productData.fdaImage) {
+      const fileInfo = await FileSystem.getInfoAsync(productData.fdaImage);
+      if (fileInfo.exists) {
+        const { type, extension } = getFileInfo(productData.fdaImage);
+        formData.append('fda_image', {
+          uri: productData.fdaImage,
+          name: `fda_${Date.now()}.${extension}`,
+          type: type,
+        });
+      }
+    }
+
+    return formData;
   };
 
   const handleUpload = async () => {
+    if (isUploading) return;
+  
+    // Validate all required fields
+    if (!productData.name || !productData.type || !productData.subtype || !productData.price) {
+      Alert.alert('Error', 'Please fill in all required fields.');
+      return;
+    }
+  
+    if (!productData.productImage || !productData.fdaImage) {
+      Alert.alert('Error', 'Both product and FDA images are required.');
+      return;
+    }
+  
     try {
-      if (!productData.name || !productData.type || !productData.subtype || !productData.price) {
-        Alert.alert('Error', 'Please fill in all required fields.');
-        return;
-      }
-
-      const typeId = typeMap[productData.type];
-      const subtypeId = subtypeMap[productData.type][productData.subtype];
-
-      if (!typeId || !subtypeId) {
-        Alert.alert('Error', 'Invalid product type or subtype.');
-        return;
-      }
-
-      const formData = new FormData();
+      setIsUploading(true);
+  
+      const formData = await prepareFormData();
+      
+      // Map fields to what the backend expects
       formData.append('ProductName', productData.name);
-      formData.append('Description', productData.description);
+      formData.append('Description', productData.description || '');
       formData.append('Price', productData.price);
-      formData.append('TypeID', typeId);
-      formData.append('SubTypeID', subtypeId);
-
-      if (productData.productImage) {
+      formData.append('TypeID', typeMap[productData.type]);
+      formData.append('SubTypeID', subtypeMap[productData.type][productData.subtype]);
+  
+      // Append product image
+      const productImageInfo = await FileSystem.getInfoAsync(productData.productImage);
+      if (productImageInfo.exists) {
+        const { type, extension } = getFileInfo(productData.productImage);
         formData.append('image', {
           uri: productData.productImage,
-          name: getFileName(productData.productImage),
-          type: getMimeType(productData.productImage),
+          name: `product_${Date.now()}.${extension}`,
+          type: type,
         });
       }
-
-      if (productData.fdaImage) {
+  
+      // Handle FDA image
+      const fdaImageInfo = await FileSystem.getInfoAsync(productData.fdaImage);
+      if (fdaImageInfo.exists) {
+        const { type, extension } = getFileInfo(productData.fdaImage);
         formData.append('fda_image', {
           uri: productData.fdaImage,
-          name: getFileName(productData.fdaImage),
-          type: getMimeType(productData.fdaImage),
+          name: `fda_${Date.now()}.${extension}`,
+          type: type,
         });
       }
-
-      // Debugging form data
-      for (let pair of formData.entries()) {
-        console.log(`${pair[0]}:`, pair[1]);
-      }
-
+  
       const url = `${API_URL}/api/products/store`;
+      console.log('Uploading to:', url);
+  
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // Timeout in 60s
+  
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          // 'Content-Type': 'multipart/form-data' is omitted to let fetch set it correctly with boundary
-          ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}),
+          Authorization: `Bearer ${userToken}`,
         },
         body: formData,
+        signal: controller.signal,
       });
-
-      const data = await res.json();
-      console.log('Upload response:', res.status, data);
-
-      if (res.ok) {
-        setShowSuccessPopup(true);
-        setTimeout(() => {
-          setShowSuccessPopup(false);
-          setProductData({
-            name: '',
-            type: 'Skincare',
-            subtype: '',
-            price: '',
-            description: '',
-            productImage: null,
-            fdaImage: null,
-          });
-          onClose();
-          router.push('/(tabs)/home');
-        }, 2000);
-      } else {
-        Alert.alert('Error', data.message || 'Failed to upload product.');
+  
+      clearTimeout(timeoutId);
+  
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Server response error:', errorText);
+        throw new Error(`Server error: ${res.status} - ${errorText.substring(0, 100)}`);
       }
+  
+      const data = await res.json();
+      console.log('Upload successful:', data);
+  
+      // Show success popup and reset form
+      setShowSuccessPopup(true);
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+        resetForm();
+        onClose();
+        router.push('/(tabs)/home');
+      }, 2000);
+  
     } catch (error) {
-      Alert.alert('Error', 'Failed to upload product.');
-      console.log('Upload error:', error);
+      console.error('Upload error:', error);
+      Alert.alert('Upload Failed', error.message || 'Failed to upload product. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
+  };
+
+  const resetForm = () => {
+    setProductData({
+      name: '',
+      type: 'Skincare',
+      subtype: '',
+      price: '',
+      description: '',
+      productImage: null,
+      fdaImage: null,
+    });
   };
 
   const SuccessPopup = () => (
@@ -294,132 +364,143 @@ const ProductUploadModal = ({ visible, onClose, userId, userName, userToken }) =
   );
 
   return (
-    <>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={visible}
-        onRequestClose={onClose}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={onClose}>
-                <Ionicons name="arrow-back" size={24} color="#731C82" />
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible && Platform.OS !== 'web'} // Hide on web
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="arrow-back" size={24} color="#731C82" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Upload a Product!</Text>
+          </View>
+          
+          <ScrollView 
+            style={styles.modalScroll}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Product Name</Text>
+              <TextInput 
+                style={styles.modalInput}
+                placeholder="Enter product name"
+                value={productData.name}
+                onChangeText={(text) => setProductData(prev => ({...prev, name: text}))}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Product Type</Text>
+              <Pressable 
+                style={styles.dropdownButton}
+                onPress={() => setShowTypeDropdown(true)}
+              >
+                <Text style={styles.dropdownButtonText}>{productData.type}</Text>
+                <Ionicons name="chevron-down" size={24} color="#666" />
+              </Pressable>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Product Subtype</Text>
+              <Pressable 
+                style={styles.dropdownButton}
+                onPress={() => setShowSubtypeDropdown(true)}
+                disabled={!productData.type}
+              >
+                <Text style={styles.dropdownButtonText}>
+                  {productData.subtype || `Select ${productData.type} Subtype`}
+                </Text>
+                <Ionicons name="chevron-down" size={24} color="#666" />
+              </Pressable>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Price</Text>
+              <TextInput 
+                style={styles.modalInput}
+                placeholder="Enter price"
+                value={productData.price}
+                onChangeText={(text) => setProductData(prev => ({...prev, price: text}))}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput 
+                style={[styles.modalInput, styles.textArea]}
+                placeholder="Enter product description"
+                value={productData.description}
+                onChangeText={(text) => setProductData(prev => ({...prev, description: text}))}
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+
+            <View style={styles.imageSection}>
+              <Text style={styles.imageLabel}>Product Image</Text>
+              <TouchableOpacity
+                style={styles.imageUploadButton}
+                onPress={() => pickImage('productImage')}
+              >
+                {productData.productImage ? (
+                  <Image
+                    source={{ uri: productData.productImage }}
+                    style={styles.previewImage}
+                  />
+                ) : (
+                  <>
+                    <Ionicons name="camera-outline" size={24} color="#666" />
+                    <Text style={styles.imageUploadText}>Add Product Image</Text>
+                  </>
+                )}
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Upload a Product!</Text>
             </View>
             
-            <ScrollView style={styles.modalScroll}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Product Name</Text>
-                <TextInput 
-                  style={styles.modalInput}
-                  placeholder="Enter product name"
-                  value={productData.name}
-                  onChangeText={(text) => setProductData(prev => ({...prev, name: text}))}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Product Type</Text>
-                <Pressable 
-                  style={styles.dropdownButton}
-                  onPress={() => setShowTypeDropdown(true)}
-                >
-                  <Text style={styles.dropdownButtonText}>{productData.type}</Text>
-                  <Ionicons name="chevron-down" size={24} color="#666" />
-                </Pressable>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Product Subtype</Text>
-                <Pressable 
-                  style={styles.dropdownButton}
-                  onPress={() => setShowSubtypeDropdown(true)}
-                >
-                  <Text style={styles.dropdownButtonText}>
-                    {productData.subtype || `Select ${productData.type} Subtype`}
-                  </Text>
-                  <Ionicons name="chevron-down" size={24} color="#666" />
-                </Pressable>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Price</Text>
-                <TextInput 
-                  style={styles.modalInput}
-                  placeholder="Enter price"
-                  value={productData.price}
-                  onChangeText={(text) => setProductData(prev => ({...prev, price: text}))}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Description</Text>
-                <TextInput 
-                  style={[styles.modalInput, styles.textArea]}
-                  placeholder="Enter product description"
-                  value={productData.description}
-                  onChangeText={(text) => setProductData(prev => ({...prev, description: text}))}
-                  multiline
-                  numberOfLines={4}
-                />
-              </View>
-
-              <View style={styles.imageSection}>
-                <TouchableOpacity 
-                  style={styles.imageUploadButton}
-                  onPress={() => pickImage('productImage')}
-                >
-                  {productData.productImage ? (
-                    <Image 
-                      source={{ uri: productData.productImage }} 
-                      style={styles.previewImage} 
-                    />
-                  ) : (
-                    <>
-                      <Ionicons name="camera-outline" size={24} color="#666" />
-                      <Text style={styles.imageUploadText}>Add Product Image</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={styles.imageUploadButton}
-                  onPress={() => pickImage('fdaImage')}
-                >
-                  {productData.fdaImage ? (
-                    <Image 
-                      source={{ uri: productData.fdaImage }} 
-                      style={styles.previewImage} 
-                    />
-                  ) : (
-                    <>
-                      <Ionicons name="document-outline" size={24} color="#666" />
-                      <Text style={styles.imageUploadText}>Add FDA Approved Image</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity 
-                style={styles.uploadButton}
-                onPress={handleUpload}
+            <View style={styles.imageSection}>
+              <Text style={styles.imageLabel}>FDA Approved Image</Text>
+              <TouchableOpacity
+                style={styles.imageUploadButton}
+                onPress={() => pickImage('fdaImage')}
               >
-                <Text style={styles.uploadButtonText}>UPLOAD</Text>
+                {productData.fdaImage ? (
+                  <Image
+                    source={{ uri: productData.fdaImage }}
+                    style={styles.previewImage}
+                  />
+                ) : (
+                  <>
+                    <Ionicons name="document-outline" size={24} color="#666" />
+                    <Text style={styles.imageUploadText}>Add FDA Approved Image</Text>
+                  </>
+                )}
               </TouchableOpacity>
-            </ScrollView>
-          </View>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
+              onPress={handleUpload}
+              disabled={isUploading}
+            >
+              <Text style={styles.uploadButtonText}>
+                {isUploading ? 'UPLOADING...' : 'UPLOAD'}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-      </Modal>
+      </View>
       <SuccessPopup />
       <TypeDropdown />
       <SubtypeDropdown />
-    </>
+    </Modal>
   );
 };
+
 
 const styles = StyleSheet.create({
   modalContainer: {

@@ -4,8 +4,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\API\MobileAuthController;
 use App\Http\Controllers\API\MobileCartController; 
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\API\ApprovedSellerProductsController;
+use App\Http\Controllers\ProductController; 
 use App\Http\Controllers\API\ProductApiController;
 use Illuminate\Support\Facades\Route; 
 
@@ -48,15 +47,13 @@ Route::middleware('auth:sanctum')->group(function () {
  
     Route::post('/products/store', [ProductController::class, 'store']);
 
-      Route::get('/pending-seller-products', [ProductController::class, 'fetchPendingSellerProducts']);
+    Route::get('/pending-sellers-with-products', [ProductController::class, 'fetchPendingSellerProducts']);
+
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
     Route::post('/products/{product}/approve', [ProductController::class, 'approveProduct']);
 
     Route::get('/seller/products', [ProductController::class, 'getSellerProducts']);
-    Route::get('/seller/approved-products', [\App\Http\Controllers\API\ApprovedSellerProductController::class, 'index']);
 
 
     Route::get('/products/all', [ProductApiController::class, 'allProducts']);
-
-    Route::get('/pending-sellers-with-products', [ProductController::class, 'fetchPendingSellersWithProducts']);
 });
