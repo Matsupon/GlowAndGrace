@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('/mobile/login', [MobileAuthController::class, 'login']);
 Route::post('/mobile/register', [MobileAuthController::class, 'register']);
 
+
+//display products by skincare, haircare, makeup in mainpage
+Route::get('/products/by-type', [\App\Http\Controllers\ProductController::class, 'getAllProductsByType']);
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mobile/user', function (Request $request) {
@@ -47,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
  
     //product seller and store products
     Route::post('/products/store', [ProductController::class, 'store']);
+    Route::post('/seller/products/store', [ProductController::class, 'storeBySeller']);
 
     Route::get('/pending-sellers-with-products', [ProductController::class, 'fetchPendingSellerProducts']);
 
@@ -71,4 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //display admin uploaded products 
     Route::post('/admin/products/store', [ProductController::class, 'storeAdmin']);
+
+    //display and demote seller list in admin
+    Route::get('/admin/sellers', [ProductController::class, 'fetchSellers']);
+    Route::post('/admin/sellers/{id}/demote', [ProductController::class, 'demoteSeller']);
+    Route::get('/admin/sellers/{id}/products', [ProductController::class, 'getSellerFDAProducts']);
 });

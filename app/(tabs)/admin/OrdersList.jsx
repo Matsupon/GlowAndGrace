@@ -155,9 +155,18 @@ const OrdersList = () => {
       <View style={styles.content}>
         <Text style={styles.title}>Orders List</Text>
         <ScrollView style={styles.ordersList}>
-          {orders.map(order => (
-            <OrderItem key={order.id} order={order} />
-          ))}
+          {orders
+            .slice() // copy array to avoid mutating state
+            .sort((a, b) => {
+              // Prefer created_at if available, otherwise use id
+              if (a.created_at && b.created_at) {
+                return new Date(b.created_at) - new Date(a.created_at);
+              }
+              return b.id - a.id;
+            })
+            .map(order => (
+              <OrderItem key={order.id} order={order} />
+            ))}
         </ScrollView>
       </View>
     </View>

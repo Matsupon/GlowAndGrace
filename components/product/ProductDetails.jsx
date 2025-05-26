@@ -11,6 +11,9 @@ import {
 } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 import { normalizeImageUrl, normalizeFdaImageUrl } from '../../utils/urlHelpers';
+import { useCart } from '../../contexts/CartContext';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProductDetails = ({
   visible,
@@ -22,6 +25,11 @@ const ProductDetails = ({
 }) => {
   const [quantity, setQuantity] = useState(1);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const { addToCart, isLoading, cartItems, refreshCart } = useCart();
+  const router = useRouter();
+
+  // Check if product is in cart
+  const isInCart = product && cartItems.some(item => item.product?.id === product.id);
 
   const incrementQuantity = () => {
     if (quantity < 100) {
@@ -32,6 +40,35 @@ const ProductDetails = ({
   const decrementQuantity = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    await addToCart(product.id, quantity);
+    if (onAddToCart) onAddToCart(quantity);
+  };
+
+  const handleOrderNow = async () => {
+    if (!product) return;
+    const success = await addToCart(product.id, quantity);
+    if (success) {
+      await refreshCart();
+      // Find the index of the newly added product in cartItems
+      let updatedCartItems = cartItems;
+      // Wait a tick for cartItems to update if needed
+      if (!cartItems.some(item => item.product?.id === product.id)) {
+        // Try to reload cartItems after refreshCart
+        updatedCartItems = (await refreshCart()) || cartItems;
+      }
+      const newIndex = updatedCartItems.findIndex(item => item.product?.id === product.id);
+      if (newIndex !== -1) {
+        // Set only this product as checked
+        const checkedItems = { [newIndex]: true };
+        await AsyncStorage.setItem('checkedItems', JSON.stringify(checkedItems));
+      }
+      onClose && onClose();
+      router.push('/cart/checkout');
     }
   };
 
@@ -106,8 +143,8 @@ const ProductDetails = ({
                     color={isFavorite ? '#FF69B4' : '#333'}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => onAddToCart(quantity)} style={styles.iconButton}>
-                  <Ionicons name="cart-outline" size={24} color="#333" />
+                <TouchableOpacity onPress={handleAddToCart} style={styles.iconButton} disabled={isLoading}>
+                  <Ionicons name={isInCart ? 'cart' : 'cart-outline'} size={24} color={isInCart ? '#FFDA5B' : '#333'} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -115,7 +152,7 @@ const ProductDetails = ({
             {/* Bottom Row */}
             <View style={styles.bottomRow}>
               <Text style={styles.price}>{product?.price}</Text>
-              <TouchableOpacity style={styles.orderButton}>
+              <TouchableOpacity style={styles.orderButton} onPress={handleOrderNow} disabled={isLoading}>
                 <Text style={styles.orderButtonText}>ORDER NOW</Text>
               </TouchableOpacity>
             </View>

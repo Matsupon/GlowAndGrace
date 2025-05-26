@@ -171,9 +171,17 @@ const OrderDetails = () => {
           {orderDetails.length === 0 ? (
             <Text style={{ textAlign: 'center', color: '#888' }}>No order details found.</Text>
           ) : (
-            orderDetails.map((detail) => (
-              <OrderDetailItem key={detail.id} detail={detail} />
-            ))
+            orderDetails
+              .slice()
+              .sort((a, b) => {
+                if (a.created_at && b.created_at) {
+                  return new Date(b.created_at) - new Date(a.created_at);
+                }
+                return b.id - a.id;
+              })
+              .map((detail) => (
+                <OrderDetailItem key={detail.id} detail={detail} />
+              ))
           )}
         </ScrollView>
       </View>

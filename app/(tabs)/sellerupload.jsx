@@ -197,7 +197,7 @@ export default function SellerUpload() {
     try {
       setIsUploading(true);
       const formData = await prepareFormData();
-      const url = `${API_URL}/api/products/store`;
+      const url = `${API_URL}/api/seller/products/store`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // Timeout in 60s
       const res = await fetch(url, {

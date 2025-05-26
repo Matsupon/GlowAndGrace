@@ -536,6 +536,10 @@ public function getSellerProducts()
     try {
         $userId = auth()->id();
         
+        if (auth()->user()->role !== 'seller') {
+            return response()->json(['error' => 'Not a seller'], 403);
+        }
+        
         $products = Product::where('user_id', $userId)
             ->get()
             ->map(function ($product) {
@@ -789,15 +793,87 @@ public function getSellerProducts()
     }
 
     public function demoteSeller($id)
-    {
-        $user = \App\Models\User::findOrFail($id);
-        if ($user->role !== 'seller') {
-            return response()->json(['error' => 'User is not a seller'], 400);
-        }
-        $user->role = 'user';
-        $user->seller_status = false;
-        $user->save();
-        return response()->json(['message' => 'Seller demoted to customer successfully']);
+{
+    $user = \App\Models\User::findOrFail($id);
+    if ($user->role !== 'seller') {
+        return response()->json(['error' => 'User is not a seller'], 400);
     }
+    $user->role = 'user';
+    $user->seller_status = false;
+    $user->save();
+    return response()->json(['message' => 'Seller demoted to customer successfully']);
+}
+
+public function getSellerFDAProducts($id)
+{
+    $user = \App\Models\User::findOrFail($id);
+    if ($user->role !== 'seller') {
+        return response()->json(['error' => 'User is not a seller'], 400);
+    }
+    $products = \App\Models\Product::where('user_id', $id)
+        ->where('is_fda_approved', 1)
+        ->get()
+        ->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'description' => $product->description,
+                'price' => $product->price,
+                'image_url' => $product->image ? asset('storage/' . $product->image) : null,
+            ];
+        });
+    return response()->json($products, 200, ['Content-Type' => 'application/json']);
+}
+
+public function storeBySeller(Request $request)
+{
+    try {
+        $user = auth()->user();
+        if (!$user || $user->role !== 'seller') {
+            return response()->json(['error' => 'Only sellers can upload here.'], 403);
+        }
+
+        $validated = $request->validate([
+            'ProductName' => 'required|string|max:255',
+            'Description' => 'nullable|string',
+            'Price' => 'required|numeric|min:0',
+            'TypeID' => 'required|integer|exists:producttypes,TypeID',
+            'SubTypeID' => 'required|integer|exists:productsubtypes,SubTypeID',
+            'image' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+            'fda_image' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+        ]);
+
+        $imagePath = $request->file('image')->store('products', 'public');
+        $fdaImagePath = $request->file('fda_image')->store('fda_approvals', 'public');
+
+        $product = Product::create([
+            'name' => $validated['ProductName'],
+            'description' => $validated['Description'] ?? null,
+            'price' => $validated['Price'],
+            'type_id' => $validated['TypeID'],
+            'subtype_id' => $validated['SubTypeID'],
+            'image' => $imagePath,
+            'fda_image' => $fdaImagePath,
+            'user_id' => $user->id,
+            'is_fda_approved' => false,
+        ]);
+
+        return response()->json([
+            'message' => 'Product uploaded successfully!',
+            'product' => $product
+        ], 201);
+
+    } catch (\Exception $e) {
+        \Log::error('Seller product upload failed:', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'request' => $request->all()
+        ]);
+        return response()->json([
+            'error' => 'Product upload failed',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
 
 }

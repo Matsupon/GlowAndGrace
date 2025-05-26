@@ -19,6 +19,7 @@ import SearchBar from '../../../components/layout/SearchBar';
 import ProductCard from '../../../components/product/ProductCard';
 import BottomNav from '../../../components/layout/BottomNav';
 import FilterDropdown from '../../../components/layout/FilterDropdown';
+import ProductDetails from '../../../components/product/ProductDetails';
 
 // Filter options for haircare
 const haircareFilters = [
@@ -38,6 +39,8 @@ export default function HaircarePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isProductDetailsVisible, setIsProductDetailsVisible] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -83,8 +86,20 @@ export default function HaircarePage() {
   };
 
   const handleProductPress = (product) => {
-    // Navigate to product details
-    console.log('Product pressed:', product);
+    setSelectedProduct(product);
+    setIsProductDetailsVisible(true);
+  };
+
+  const handleCloseProductDetails = () => {
+    setIsProductDetailsVisible(false);
+    setSelectedProduct(null);
+  };
+
+  const handleAddToCartFromDetails = (quantity) => {
+    if (selectedProduct) {
+      setCartItems(prev => ({ ...prev, [selectedProduct.id]: true }));
+      // Optionally: show a toast or feedback
+    }
   };
 
   const handleCartPress = () => {
@@ -139,7 +154,7 @@ export default function HaircarePage() {
       isInCart={cartItems[item.id]}
       onToggleFavorite={toggleFavorite}
       onAddToCart={handleAddToCart}
-      onPress={() => handleProductPress(item)}
+      onPress={handleProductPress}
     />
   );
 
@@ -205,6 +220,14 @@ export default function HaircarePage() {
       
       {/* Bottom Navigation */}
       <BottomNav />
+      <ProductDetails
+        visible={isProductDetailsVisible}
+        product={selectedProduct}
+        onClose={handleCloseProductDetails}
+        onAddToCart={handleAddToCartFromDetails}
+        onToggleFavorite={() => selectedProduct && toggleFavorite(selectedProduct.id)}
+        isFavorite={selectedProduct ? favorite[selectedProduct.id] : false}
+      />
     </View>
   );
 }
