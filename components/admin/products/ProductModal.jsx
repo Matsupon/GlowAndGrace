@@ -9,7 +9,8 @@ import {
   ScrollView,
   Pressable,
   Image,
-  Alert
+  Alert,
+  Button
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,7 +21,7 @@ const productTypes = {
   Makeup: ['Foundations', 'Concealers', 'Blushes', 'Lip Tints']
 };
 
-const ProductModal = ({ visible, onClose, product }) => {
+const ProductModal = ({ visible, onClose, product, mode, onSave }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [productData, setProductData] = useState({
     name: '',
@@ -144,9 +145,8 @@ const ProductModal = ({ visible, onClose, product }) => {
   };
 
   const handleSave = () => {
-    // Here you would typically save the changes to your backend
-    Alert.alert('Success', 'Product updated successfully!');
-    setIsEditing(false);
+    // Make sure to include the product id!
+    onSave({ ...product, ...productData, price: parseFloat(productData.price) });
   };
 
   const renderViewMode = () => (
@@ -247,12 +247,13 @@ const ProductModal = ({ visible, onClose, product }) => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity 
-        style={styles.uploadButton}
-        onPress={handleSave}
-      >
-        <Text style={styles.uploadButtonText}>SAVE CHANGES</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonRow}>
+        <Button title="Close" onPress={onClose} />
+        <Button
+          title="Save"
+          onPress={handleSave}
+        />
+      </View>
     </ScrollView>
   );
 
@@ -278,11 +279,11 @@ const ProductModal = ({ visible, onClose, product }) => {
               <Ionicons name="arrow-back" size={24} color="#731C82" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
-              {isEditing ? 'Edit Product' : 'Product Details'}
+              {mode === 'edit' ? 'Edit Product' : 'Product Details'}
             </Text>
           </View>
 
-          {isEditing ? renderEditMode() : renderViewMode()}
+          {mode === 'edit' ? renderEditMode() : renderViewMode()}
         </View>
       </View>
       <TypeDropdown />
@@ -419,18 +420,10 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 8,
   },
-  uploadButton: {
-    backgroundColor: '#731C82',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 10,
-    marginBottom: 20,
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   dropdownOverlay: {
     flex: 1,

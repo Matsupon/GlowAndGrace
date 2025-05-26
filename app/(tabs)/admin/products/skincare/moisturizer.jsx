@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Checkbox } from 'react-native-paper';
 import ProductCard from '../../../../../components/admin/products/ProductCard';
 import AdminHeader from '../../../../../components/admin/AdminHeader';
 import ProductModal from '../../../../../components/admin/products/ProductModal';
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
+import { fetchSkincareSubtypesWithProducts, updateProduct } from '../../../../../utils/api';
 
 export default function MoisturizerPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
@@ -13,56 +14,28 @@ export default function MoisturizerPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [subtypes, setSubtypes] = useState([]);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
 
-  const products = [
-    {
-      id: '1',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'A lightweight moisturizer with SPF50 PA++++ protection that provides a dewy finish while keeping your skin hydrated and protected from harmful UV rays.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product2.png'),
-      details: {
-        brand: 'BELO',
-        volume: '50ml',
-        benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight',
-          'Hydrating'
-        ],
-        ingredients: [
-          'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
-        ]
-      }
-    },
-    {
-      id: '2',
-      name: 'Celeteque Hydration Facial Moisturizer',
-      description: 'A gentle, non-greasy moisturizer that provides long-lasting hydration for all skin types. Perfect for daily use.',
-      price: 95.00,
-      image: require('../../../../../assets/images/product3.png'),
-      details: {
-        brand: 'Celeteque',
-        volume: '50ml',
-        benefits: [
-          'Hydrating',
-          'Non-greasy',
-          'Gentle formula',
-          'Suitable for all skin types'
-        ],
-        ingredients: [
-          'Water',
-          'Glycerin',
-          'Dimethicone',
-          'Allantoin'
-        ]
-      }
-    },
-  ];
+  useEffect(() => {
+    setLoading(true);
+    fetchSkincareSubtypesWithProducts()
+      .then(data => {
+        setSubtypes(data.subtypes || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  // Find the cleanser subtype (adjust the name as needed)
+  const moisturizerSubtype = subtypes.find(st => st.name.toLowerCase().includes('moisturizer'));
+  const products = moisturizerSubtype ? moisturizerSubtype.products : [];
 
   const handleSelectProduct = (productId) => {
     const newSelected = new Set(selectedProducts);
@@ -88,8 +61,10 @@ export default function MoisturizerPage() {
     setIsModalVisible(true);
   };
 
-  const handleEditProduct = () => {
+  const handleEditProduct = (product) => {
+    setSelectedProduct(product);
     setModalMode('edit');
+    setIsModalVisible(true);
   };
 
   const handleCloseModal = () => {
@@ -98,14 +73,38 @@ export default function MoisturizerPage() {
     setModalMode('view');
   };
 
-  const handleSaveProduct = (updatedProduct) => {
-    // Here you would typically update the product in your backend
-    handleCloseModal();
+  const handleSaveProduct = async (updatedProduct) => {
+    try {
+      setLoading(true);
+      await updateProduct(updatedProduct.id, {
+        name: updatedProduct.name,
+        description: updatedProduct.description,
+        price: updatedProduct.price,
+      });
+      setSuccessMessage('Product updated successfully!');
+      setIsModalVisible(false);
+      setSelectedProduct(null);
+      setModalMode('view');
+      // Refresh data
+      const data = await fetchSkincareSubtypesWithProducts();
+      setSubtypes(data.subtypes || []);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
   };
 
   const toggleSidebar = () => {
     setSidebarVisible(!sidebarVisible);
   };
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#731C82" style={{ flex: 1, justifyContent: 'center' }} />;
+  }
+  if (error) {
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Error: {error}</Text></View>;
+  }
 
   return (
     <View style={styles.container}>
@@ -114,7 +113,7 @@ export default function MoisturizerPage() {
 
       <View style={styles.header}>
         <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Moisturizers"</Text>
+        <Text style={styles.subtitle}>"Cream"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -132,7 +131,8 @@ export default function MoisturizerPage() {
             product={product}
             selected={selectedProducts.has(product.id)}
             onSelect={handleSelectProduct}
-            onPress={() => handleProductPress(product)}
+            onPress={handleProductPress}
+            onEdit={handleEditProduct}
           />
         ))}
       </ScrollView>
@@ -145,6 +145,12 @@ export default function MoisturizerPage() {
         onSave={handleSaveProduct}
         onEdit={handleEditProduct}
       />
+
+      {successMessage ? (
+        <View style={styles.successMessageContainer}>
+          <Text style={styles.successMessageText}>{successMessage}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -181,5 +187,17 @@ const styles = StyleSheet.create({
   },
   productList: {
     flex: 1,
+  },
+  successMessageContainer: {
+    padding: 10,
+    backgroundColor: '#dff0d8',
+    borderWidth: 1,
+    borderColor: '#d6e9c6',
+    borderRadius: 4,
+    margin: 10,
+  },
+  successMessageText: {
+    fontSize: 16,
+    color: '#3c763d',
   },
 });

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { Checkbox } from 'react-native-paper';
+import { Checkbox, IconButton } from 'react-native-paper';
 
-export default function ProductCard({ product, onSelect, selected, onPress }) {
+export default function ProductCard({ product, onSelect, selected, onPress, onEdit }) {
   return (
     <TouchableOpacity onPress={() => onPress && onPress(product)} style={styles.container}>
       <Checkbox
@@ -17,8 +17,18 @@ export default function ProductCard({ product, onSelect, selected, onPress }) {
           <Text style={styles.description} numberOfLines={2}>
             {product.description}
           </Text>
-          <Text style={styles.price}>₱{product.price.toFixed(2)}</Text>
+          <Text style={styles.price}>
+            {product.price !== null && product.price !== undefined && !isNaN(Number(product.price))
+              ? Number(product.price).toFixed(2)
+              : 'N/A'}
+          </Text>
         </View>
+        <IconButton
+          icon="pencil"
+          size={20}
+          onPress={() => onEdit && onEdit(product)}
+          style={{ marginLeft: 8 }}
+        />
       </View>
     </TouchableOpacity>
   );

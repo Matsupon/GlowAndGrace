@@ -1,67 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Checkbox } from 'react-native-paper';
 import ProductCard from '../../../../../components/admin/products/ProductCard';
 import AdminHeader from '../../../../../components/admin/AdminHeader';
 import ProductModal from '../../../../../components/admin/products/ProductModal';
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
+import { fetchSkincareSubtypesWithProducts, updateProduct, bulkDeleteProducts } from '../../../../../utils/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function TonersPage() {
+export default function TonerPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'edit'
+  const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [products, setProducts] = useState([
-    {
-      id: '1',
-      name: 'KOJIE SAN Skin Lightening Pore Minimizing Toner 100ml',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product1.png'),
-      details: {
-        brand: 'KOJIE SAN',
-        volume: '100ml',
-        benefits: [
-          'Skin lightening',
-          'Pore minimizing',
-          'Skin purifying'
-        ],
-        ingredients: [
-          'Water',
-          'Alcohol',
-          'Kojic Acid',
-          'Glycerin'
-        ]
-      }
-    },
-    {
-      id: '2',
-      name: 'BELO Sunexpert Dewy Essence Sunscreen SPF50 PA++++',
-      description: 'KOJIESAN Skin Lightening Pore Minimizing Toner. A skin purifying formula that minimizes the appearance of enlarged pores due to oily skin Helps tighten pores and improve skin texture.',
-      price: 110.00,
-      image: require('../../../../../assets/images/product3.png'),
-      details: {
-        brand: 'BELO',
-        volume: '50ml',
-        benefits: [
-          'Sun protection',
-          'Dewy finish',
-          'Lightweight'
-        ],
-        ingredients: [
-          'Water',
-          'UV Filters',
-          'Glycerin',
-          'Niacinamide'
-        ]
-      }
-    },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [subtypes, setSubtypes] = useState([]);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    setLoading(true);
+    fetchSkincareSubtypesWithProducts()
+      .then(data => {
+        setSubtypes(data.subtypes || []);
+        AsyncStorage.setItem('toner_subtypes', JSON.stringify(data.subtypes || []));
+        setLoading(false);
+      })
+      .catch(async err => {
+        setError(err.message);
+        setLoading(false);
+        // Try to load from cache
+        const cached = await AsyncStorage.getItem('toner_subtypes');
+        if (cached) setSubtypes(JSON.parse(cached));
+      });
+  }, []);
+
+  // Find the cleanser subtype (adjust the name as needed)
+  const tonerSubtype = subtypes.find(st => st.name.toLowerCase().includes('toner'));
+  const products = tonerSubtype ? tonerSubtype.products : [];
 
   const handleSelectProduct = (productId) => {
     const newSelected = new Set(selectedProducts);
@@ -87,62 +66,70 @@ export default function TonersPage() {
     setIsModalVisible(true);
   };
 
-  const handleEditProduct = () => {
+  const handleEditProduct = (product) => {
+    setSelectedProduct(product);
     setModalMode('edit');
+    setIsModalVisible(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalVisible(false);
-    setSelectedProduct(null);
-    setModalMode('view');
+  const handleSaveProduct = async (updatedProduct) => {
+    try {
+      setLoading(true);
+      await updateProduct(updatedProduct.id, {
+        name: updatedProduct.name,
+        description: updatedProduct.description,
+        price: updatedProduct.price,
+      });
+      setSuccessMessage('Product updated successfully!');
+      setIsModalVisible(false);
+      setSelectedProduct(null);
+      setModalMode('view');
+      // Refresh data
+      const data = await fetchSkincareSubtypesWithProducts();
+      setSubtypes(data.subtypes || []);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
   };
 
-  const handleSaveProduct = (updatedProduct) => {
-    // Here you would typically update the product in your backend
-    // For now, we'll just close the modal
-    handleCloseModal();
+  const handleDeleteSelected = async () => {
+    if (selectedProducts.size === 0) {
+      Alert.alert('No products selected', 'Please select at least one product to delete.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await bulkDeleteProducts(Array.from(selectedProducts));
+      setSuccessMessage('Products deleted successfully!');
+      setSelectedProducts(new Set());
+      // Refresh data
+      const data = await fetchSkincareSubtypesWithProducts();
+      setSubtypes(data.subtypes || []);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
   };
 
   const toggleSidebar = () => {
     setSidebarVisible(!sidebarVisible);
   };
 
-  const handleDeleteClick = () => {
-    if (selectedProducts.size === 0) {
-      Alert.alert('No products selected', 'Please select at least one product to delete.');
-      return;
-    }
-    setShowDeleteConfirmation(true);
-  };
-
-  const confirmDelete = () => {
-    setShowDeleteConfirmation(false);
-    
-    // Filter out the selected products
-    const remainingProducts = products.filter(
-      product => !selectedProducts.has(product.id)
-    );
-    
-    setProducts(remainingProducts);
-    setSelectedProducts(new Set());
-    setShowSuccessMessage(true);
-    
-    // Hide success message after 2 seconds
-    setTimeout(() => {
-      setShowSuccessMessage(false);
-    }, 2000);
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteConfirmation(false);
-  };
+  if (loading) {
+    return <ActivityIndicator size="large" color="#731C82" style={{ flex: 1, justifyContent: 'center' }} />;
+  }
+  if (error) {
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Error: {error}</Text></View>;
+  }
 
   return (
     <View style={styles.container}>
       <AdminHeader onMenuPress={toggleSidebar} />
       <Sidebar isVisible={sidebarVisible} onClose={toggleSidebar} />
 
-      {/* Page Title */}
       <View style={styles.header}>
         <Text style={styles.title}>Skincare Products List</Text>
         <Text style={styles.subtitle}>"Toners"</Text>
@@ -155,9 +142,9 @@ export default function TonersPage() {
         />
         <Text style={styles.selectAllText}>Select All:</Text>
         {selectedProducts.size > 0 && (
-          <Text style={styles.selectedCount}>
-            {selectedProducts.size} selected
-          </Text>
+          <TouchableOpacity onPress={handleDeleteSelected} style={styles.deleteButton}>
+            <Text style={styles.deleteButtonText}>Delete Selected</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -168,59 +155,26 @@ export default function TonersPage() {
             product={product}
             selected={selectedProducts.has(product.id)}
             onSelect={handleSelectProduct}
-            onPress={() => handleProductPress(product)}
+            onPress={handleProductPress}
+            onEdit={handleEditProduct}
           />
         ))}
       </ScrollView>
-
-      {selectedProducts.size > 0 && (
-        <TouchableOpacity 
-          style={styles.deleteButton}
-          onPress={handleDeleteClick}
-        >
-          <Text style={styles.deleteButtonText}>DELETE</Text>
-        </TouchableOpacity>
-      )}
 
       <ProductModal
         visible={isModalVisible}
         product={selectedProduct}
         mode={modalMode}
-        onClose={handleCloseModal}
+        onClose={() => setIsModalVisible(false)}
         onSave={handleSaveProduct}
         onEdit={handleEditProduct}
       />
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        transparent={true}
-        visible={showDeleteConfirmation}
-        animationType="fade"
-        onRequestClose={cancelDelete}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalText}>
-              Are you sure you want to delete {selectedProducts.size > 1 ? 'these products' : 'this product'}?
-            </Text>
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.cancelButton} onPress={cancelDelete}>
-                <Text style={styles.buttonText}>NO</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={confirmDelete}>
-                <Text style={styles.buttonText}>YES</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Success Message */}
-      {showSuccessMessage && (
+      {successMessage ? (
         <View style={styles.successMessageContainer}>
-          <Text style={styles.successMessageText}>Product deleted successfully</Text>
+          <Text style={styles.successMessageText}>{successMessage}</Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -255,69 +209,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 10,
   },
-  selectedCount: {
-    marginLeft: 10,
-    color: '#731C82',
-  },
   productList: {
     flex: 1,
-    marginBottom: 60, // To make space for the delete button
   },
   deleteButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
     backgroundColor: '#F78383',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 5,
-    elevation: 3,
+    marginLeft: 10,
   },
   deleteButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-  },
-  modalText: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  cancelButton: {
-    padding: 10,
-    backgroundColor: '#FF6D6F',
-    borderRadius: 5,
-    width: '40%',
-    alignItems: 'center',
-  },
-  confirmButton: {
-    padding: 10,
-    backgroundColor: '#64CE73',
-    borderRadius: 5,
-    width: '40%',
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  // Success message styles
   successMessageContainer: {
     position: 'absolute',
     top: 0,

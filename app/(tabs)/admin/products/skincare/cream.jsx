@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Checkbox } from 'react-native-paper';
 import ProductCard from '../../../../../components/admin/products/ProductCard';
 import AdminHeader from '../../../../../components/admin/AdminHeader';
 import ProductModal from '../../../../../components/admin/products/ProductModal';
 import { useRouter } from 'expo-router';
 import Sidebar from '../../../../../components/admin/Sidebar';
+import { fetchSkincareSubtypesWithProducts, updateProduct, bulkDeleteProducts } from '../../../../../utils/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CreamPage() {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
@@ -13,56 +15,32 @@ export default function CreamPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState('view');
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [subtypes, setSubtypes] = useState([]);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
 
-  const products = [
-    {
-      id: '1',
-      name: 'Pond\'s Bright Beauty Spot-less Glow Cream',
-      description: 'A brightening cream that helps reduce dark spots and evens out skin tone while providing deep hydration.',
-      price: 120.00,
-      image: require('../../../../../assets/images/product4.png'),
-      details: {
-        brand: 'Pond\'s',
-        volume: '50g',
-        benefits: [
-          'Brightens skin',
-          'Reduces dark spots',
-          'Even skin tone',
-          'Deep hydration'
-        ],
-        ingredients: [
-          'Water',
-          'Glycerin',
-          'Niacinamide',
-          'Vitamin B3'
-        ]
-      }
-    },
-    {
-      id: '2',
-      name: 'Olay Regenerist Micro-Sculpting Cream',
-      description: 'An anti-aging cream that helps reduce fine lines and wrinkles while improving skin elasticity.',
-      price: 150.00,
-      image: require('../../../../../assets/images/product5.png'),
-      details: {
-        brand: 'Olay',
-        volume: '50g',
-        benefits: [
-          'Anti-aging',
-          'Reduces fine lines',
-          'Improves elasticity',
-          'Firming'
-        ],
-        ingredients: [
-          'Water',
-          'Glycerin',
-          'Niacinamide',
-          'Amino-Peptide Complex'
-        ]
-      }
-    },
-  ];
+  useEffect(() => {
+    setLoading(true);
+    fetchSkincareSubtypesWithProducts()
+      .then(data => {
+        setSubtypes(data.subtypes || []);
+        AsyncStorage.setItem('cream_subtypes', JSON.stringify(data.subtypes || []));
+        setLoading(false);
+      })
+      .catch(async err => {
+        setError(err.message);
+        setLoading(false);
+        // Try to load from cache
+        const cached = await AsyncStorage.getItem('cream_subtypes');
+        if (cached) setSubtypes(JSON.parse(cached));
+      });
+  }, []);
+
+  // Find the cleanser subtype (adjust the name as needed)
+  const creamSubtype = subtypes.find(st => st.name.toLowerCase().includes('cream'));
+  const products = creamSubtype ? creamSubtype.products : [];
 
   const handleSelectProduct = (productId) => {
     const newSelected = new Set(selectedProducts);
@@ -88,24 +66,64 @@ export default function CreamPage() {
     setIsModalVisible(true);
   };
 
-  const handleEditProduct = () => {
+  const handleEditProduct = (product) => {
+    setSelectedProduct(product);
     setModalMode('edit');
+    setIsModalVisible(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalVisible(false);
-    setSelectedProduct(null);
-    setModalMode('view');
+  const handleSaveProduct = async (updatedProduct) => {
+    try {
+      setLoading(true);
+      await updateProduct(updatedProduct.id, {
+        name: updatedProduct.name,
+        description: updatedProduct.description,
+        price: updatedProduct.price,
+      });
+      setSuccessMessage('Product updated successfully!');
+      setIsModalVisible(false);
+      setSelectedProduct(null);
+      setModalMode('view');
+      // Refresh data
+      const data = await fetchSkincareSubtypesWithProducts();
+      setSubtypes(data.subtypes || []);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
   };
 
-  const handleSaveProduct = (updatedProduct) => {
-    // Here you would typically update the product in your backend
-    handleCloseModal();
+  const handleDeleteSelected = async () => {
+    if (selectedProducts.size === 0) {
+      Alert.alert('No products selected', 'Please select at least one product to delete.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await bulkDeleteProducts(Array.from(selectedProducts));
+      setSuccessMessage('Products deleted successfully!');
+      setSelectedProducts(new Set());
+      // Refresh data
+      const data = await fetchSkincareSubtypesWithProducts();
+      setSubtypes(data.subtypes || []);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
   };
 
   const toggleSidebar = () => {
     setSidebarVisible(!sidebarVisible);
   };
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#731C82" style={{ flex: 1, justifyContent: 'center' }} />;
+  }
+  if (error) {
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Error: {error}</Text></View>;
+  }
 
   return (
     <View style={styles.container}>
@@ -114,7 +132,7 @@ export default function CreamPage() {
 
       <View style={styles.header}>
         <Text style={styles.title}>Skincare Products List</Text>
-        <Text style={styles.subtitle}>"Creams"</Text>
+        <Text style={styles.subtitle}>"Cream"</Text>
       </View>
 
       <View style={styles.selectAllContainer}>
@@ -123,6 +141,11 @@ export default function CreamPage() {
           onPress={handleSelectAll}
         />
         <Text style={styles.selectAllText}>Select All:</Text>
+        {selectedProducts.size > 0 && (
+          <TouchableOpacity onPress={handleDeleteSelected} style={styles.deleteButton}>
+            <Text style={styles.deleteButtonText}>Delete Selected</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.productList}>
@@ -132,7 +155,8 @@ export default function CreamPage() {
             product={product}
             selected={selectedProducts.has(product.id)}
             onSelect={handleSelectProduct}
-            onPress={() => handleProductPress(product)}
+            onPress={handleProductPress}
+            onEdit={handleEditProduct}
           />
         ))}
       </ScrollView>
@@ -141,10 +165,15 @@ export default function CreamPage() {
         visible={isModalVisible}
         product={selectedProduct}
         mode={modalMode}
-        onClose={handleCloseModal}
+        onClose={() => setIsModalVisible(false)}
         onSave={handleSaveProduct}
-        onEdit={handleEditProduct}
       />
+
+      {successMessage ? (
+        <View style={styles.successMessageContainer}>
+          <Text style={styles.successMessageText}>{successMessage}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -181,5 +210,30 @@ const styles = StyleSheet.create({
   },
   productList: {
     flex: 1,
+  },
+  deleteButton: {
+    backgroundColor: '#F78383',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  successMessageContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#4BB543',
+    padding: 15,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  successMessageText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });

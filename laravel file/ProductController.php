@@ -876,4 +876,71 @@ public function storeBySeller(Request $request)
     }
 }
 
+    /**
+     * Fetch all skincare subtypes and their products for admin dashboard.
+     * Returns an array of subtypes, each with its products.
+     * Route: GET /api/skincare/subtypes-products
+     */
+    public function getSkincareSubtypesWithProducts()
+    {
+        $subtypes = \App\Models\ProductSubtype::where('TypeID', 1)
+            ->with(['products' => function ($query) {
+                $query->with('user');
+            }])
+            ->get();
+
+        $result = $subtypes->map(function ($subtype) {
+            return [
+                'id' => $subtype->SubTypeID ?? $subtype->id,
+                'name' => $subtype->SubTypeName ?? $subtype->name,
+                'products' => $subtype->products->map(function ($product) {
+                    return [
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'description' => $product->description,
+                        'price' => $product->price,
+                        'image' => $product->image ? asset('storage/' . $product->image) : null,
+                        'is_fda_approved' => $product->is_fda_approved,
+                        'created_at' => $product->created_at,
+                    ];
+                }),
+            ];
+        });
+
+        return response()->json(['subtypes' => $result], 200, ['Content-Type' => 'application/json']);
+    }
+
+    // Update a product (PATCH /api/products/{id})
+    public function updateProduct(Request $request, $id)
+    {
+        $product = \App\Models\Product::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric',
+        ]);
+
+        $product->name = $validated['name'];
+        $product->description = $validated['description'] ?? null;
+        $product->price = $validated['price'];
+        $product->save();
+
+        return response()->json([
+            'message' => 'Product updated successfully!',
+            'product' => $product
+        ], 200, ['Content-Type' => 'application/json']);
+    }
+
+    // Bulk delete products (POST /api/products/bulk-delete)
+    public function bulkDeleteProducts(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['error' => 'No product IDs provided.'], 400);
+        }
+        \App\Models\Product::whereIn('id', $ids)->delete();
+        return response()->json(['message' => 'Products deleted successfully!'], 200, ['Content-Type' => 'application/json']);
+    }
+
 }

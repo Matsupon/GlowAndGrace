@@ -17,6 +17,9 @@ Route::post('/mobile/register', [MobileAuthController::class, 'register']);
 //display products by skincare, haircare, makeup in mainpage
 Route::get('/products/by-type', [\App\Http\Controllers\ProductController::class, 'getAllProductsByType']);
 
+// --- NEW: Fetch all skincare subtypes and their products for admin dashboard ---
+Route::get('/skincare/subtypes-products', [ProductController::class, 'getSkincareSubtypesWithProducts']);
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mobile/user', function (Request $request) {
@@ -81,4 +84,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/sellers', [ProductController::class, 'fetchSellers']);
     Route::post('/admin/sellers/{id}/demote', [ProductController::class, 'demoteSeller']);
     Route::get('/admin/sellers/{id}/products', [ProductController::class, 'getSellerFDAProducts']);
+
+    
 });
+
+Route::patch('/products/{id}', [ProductController::class, 'updateProduct']);
+// Place this OUTSIDE any Route::middleware('auth:sanctum')->group(...)
+Route::post('/products/bulk-delete', [ProductController::class, 'bulkDeleteProducts']);
